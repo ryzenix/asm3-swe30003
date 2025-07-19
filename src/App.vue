@@ -1,8 +1,13 @@
 <script setup>
-  import Navigation from './components/Navigation.vue'
+  import {
+    ref
+  } from 'vue'
+  import Navigation from './components/Header/Navigation.vue'
   import Footer from './components/Footer.vue'
   import ProductRow from './components/home/ProductRow.vue'
   import BannerSlider from './components/home/BannerSlider.vue'
+  import AuthOverlay from './components/AuthOverlay/AuthOverlay.vue'
+  const showAuth = ref(false)
   const featuredBanners = [{
       image: '/img/banners/banner-1.png'
     },
@@ -63,7 +68,7 @@
 
 <template>
   <div id="app" class="flex flex-col min-h-screen">
-    <Navigation />
+    <Navigation @open-login="showAuth = true" />
     <main class="flex-grow">
       <div class="container mx-auto px-4 my-6">
         <BannerSlider :banners="featuredBanners" />
@@ -74,5 +79,6 @@
       </div>
     </main>
     <Footer />
+    <AuthOverlay :visible="showAuth" @close="showAuth = false" />
   </div>
 </template>

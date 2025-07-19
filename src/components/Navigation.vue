@@ -8,18 +8,13 @@
           <img src="/logo.webp" alt="Long Chau Logo" class="w-50 h-12" />
           <p class="text-xs text-center mt-1">Serving health across Vietnam</p>
         </div>
-
         <!-- Search bar - Hidden on mobile, shown on tablet+ -->
         <div class="flex-1 mx-4 hidden md:block">
           <div class="flex">
-            <input
-              type="text"
-              placeholder="Tìm thuốc, bệnh lý, thực phẩm chức năng..."
-              class="w-full px-4 py-2 rounded-l-md text-black text-sm bg-white"
-            />
+            <input type="text" placeholder="Tìm thuốc, bệnh lý, thực phẩm chức năng..." class="w-full px-4 py-2 rounded-l-md text-black text-sm bg-white" />
             <button class="bg-green-500 px-4 rounded-r-md hover:bg-green-600 flex-shrink-0">
-              <i class="fas fa-search"></i>
-            </button>
+                <i class="fas fa-search"></i>
+              </button>
           </div>
           <div class="text-xs text-white mt-1 space-x-2 hidden lg:block">
             <span class="hover:underline cursor-pointer">canxi</span>
@@ -30,56 +25,35 @@
             <span class="hover:underline cursor-pointer">omega 3</span>
           </div>
         </div>
-
         <!-- Mobile Actions -->
         <div class="flex items-center gap-2">
           <!-- Mobile Search Button -->
-          <button 
-            @click="toggleMobileSearch"
-            class="md:hidden bg-green-900 p-2 rounded-md hover:bg-green-800"
-          >
-            <i class="fas fa-search"></i>
-          </button>
-
+          <button @click="toggleMobileSearch" class="md:hidden bg-green-900 p-2 rounded-md hover:bg-green-800 flex items-center justify-center">
+              <i class="fas fa-search"></i>
+            </button>
           <!-- Cart -->
-          <RouterLink
-            to="/customer/cart"
-            class="flex items-center gap-1 bg-green-900 px-2 py-2 sm:px-4 rounded-md hover:bg-green-800"
-          >
-            <i class="fas fa-shopping-cart"></i> 
+          <button to="/customer/cart" class="flex items-center justify-center gap-1 bg-green-900 px-2 py-2 sm:px-4 rounded-md hover:bg-green-800">
+            <i class="fas fa-shopping-cart"></i>
             <span class="hidden sm:inline">Giỏ hàng</span>
-          </RouterLink>
-
+          </button>
           <!-- Login -->
-          <RouterLink
-            to="/login"
-            class="flex items-center gap-1 bg-white text-green-800 px-2 py-2 sm:px-4 rounded-full hover:bg-gray-100"
-          >
+          <button @click="$emit('open-login')" class="flex items-center justify-center gap-1 bg-white text-green-800 px-2 py-2 sm:px-4 rounded-full hover:bg-gray-100">
             <i class="fas fa-user"></i> 
             <span class="hidden sm:inline">Đăng nhập</span>
-          </RouterLink>
-
-          <!-- Mobile Menu Button -->
-          <button 
-            @click="toggleMobileMenu"
-            class="md:hidden bg-green-900 p-2 rounded-md hover:bg-green-800"
-          >
-            <i class="fas fa-bars"></i>
           </button>
+          <!-- Mobile Menu Button -->
+          <button @click="toggleMobileMenu" class="md:hidden bg-green-900 p-2 rounded-md hover:bg-green-800 flex items-center justify-center">
+              <i class="fas fa-bars"></i>
+            </button>
         </div>
       </div>
-
       <!-- Mobile Search Bar -->
       <div v-if="showMobileSearch" class="mt-3 md:hidden">
         <div class="flex">
-          <input
-            type="text"
-            placeholder="Tìm thuốc, bệnh lý, thực phẩm chức năng..."
-            class="w-full px-4 py-2 rounded-l-md text-black text-sm bg-white"
-          />
+          <input type="text" placeholder="Tìm thuốc, bệnh lý, thực phẩm chức năng..." class="w-full px-4 py-2 rounded-l-md text-black text-sm bg-white" />
           <button class="bg-green-500 px-4 rounded-r-md hover:bg-green-600 flex-shrink-0">
-            <i class="fas fa-search"></i>
-          </button>
+              <i class="fas fa-search"></i>
+            </button>
         </div>
         <div class="text-xs text-white mt-2 flex flex-wrap gap-2">
           <span class="hover:underline cursor-pointer">canxi</span>
@@ -91,7 +65,6 @@
         </div>
       </div>
     </div>
-
     <!-- Navigation Menu -->
     <!-- Desktop Navigation -->
     <nav class="bg-green-800 text-sm hidden md:block">
@@ -107,7 +80,6 @@
         <div class="cursor-pointer hover:underline">Tin tức</div>
       </div>
     </nav>
-
     <!-- Mobile Navigation Menu -->
     <nav v-if="showMobileMenu" class="bg-green-800 text-sm md:hidden">
       <div class="container mx-auto px-4 py-2 space-y-2">
@@ -126,44 +98,53 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-
-// Mobile menu state
-const showMobileMenu = ref(false)
-const showMobileSearch = ref(false)
-
-// Toggle functions
-const toggleMobileMenu = () => {
-  showMobileMenu.value = !showMobileMenu.value
-  // Close search if menu is opened
-  if (showMobileMenu.value) {
-    showMobileSearch.value = false
+  import {
+    ref
+  } from 'vue'
+  // Define emits
+  const emit = defineEmits(['open-login'])
+  // Mobile menu state
+  const showMobileMenu = ref(false)
+  const showMobileSearch = ref(false)
+  // Toggle functions
+  const toggleMobileMenu = () => {
+    showMobileMenu.value = !showMobileMenu.value
+    // Close search if menu is opened
+    if (showMobileMenu.value) {
+      showMobileSearch.value = false
+    }
   }
-}
-
-const toggleMobileSearch = () => {
-  showMobileSearch.value = !showMobileSearch.value
-  // Close menu if search is opened
-  if (showMobileSearch.value) {
-    showMobileMenu.value = false
+  const toggleMobileSearch = () => {
+    showMobileSearch.value = !showMobileSearch.value
+    // Close menu if search is opened
+    if (showMobileSearch.value) {
+      showMobileMenu.value = false
+    }
   }
-}
 </script>
 
 <style scoped>
-/* Optional: Load Font Awesome if you're using those icons */
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
-
-/* Ensure proper touch targets on mobile */
-@media (max-width: 768px) {
-  button, .cursor-pointer {
-    min-height: 44px;
-    min-width: 44px;
+  /* Optional: Load Font Awesome if you're using those icons */
+  @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+  
+  /* Ensure proper touch targets on mobile */
+  @media (max-width: 768px) {
+    button,
+    .cursor-pointer {
+      min-height: 44px;
+      min-width: 44px;
+    }
   }
-}
-
-/* Animation for mobile menu */
-nav {
-  transition: all 0.3s ease-in-out;
-}
+  
+  /* Animation for mobile menu */
+  nav {
+    transition: all 0.3s ease-in-out;
+  }
+  
+  /* Ensure icons are properly centered */
+  button i {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 </style>

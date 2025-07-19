@@ -45,7 +45,8 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+let interval = null;
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
   banners: {
@@ -68,6 +69,17 @@ function prevSlide() {
 function goToSlide(index) {
   currentIndex.value = index
 }
+
+onMounted(() => {
+  interval = setInterval(() => {
+    nextSlide()
+  }, 5000) // change every 5 seconds
+})
+
+onBeforeUnmount(() => {
+  clearInterval(interval)
+})
+
 </script>
 
 <style scoped>

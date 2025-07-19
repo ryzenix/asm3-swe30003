@@ -28,7 +28,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import LoginModal from './LoginModal.vue'
 import RegisterModal from './RegisterModal.vue'
 

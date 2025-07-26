@@ -387,6 +387,7 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 input[type="number"] {
+  appearance: textfield;
   -moz-appearance: textfield;
 }
 </style>

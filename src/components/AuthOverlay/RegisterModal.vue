@@ -1,220 +1,375 @@
 <template>
   <div class="bg-white rounded-xl shadow-xl p-6 text-gray-800 max-h-[90vh] overflow-y-auto">
-      <!-- Back + Title -->
-      <div class="flex items-center mb-4">
-        <button
-          @click="$emit('back')"
-          class="mr-3 p-1 text-gray-600 hover:text-black hover:bg-gray-100 rounded-full transition-colors"
-          title="Quay lại đăng nhập"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+    <!-- Back + Title -->
+    <div class="flex items-center mb-4">
+      <button
+        @click="$emit('back')"
+        class="mr-3 p-1 text-gray-600 hover:text-black hover:bg-gray-100 rounded-full transition-colors"
+        title="Quay lại đăng nhập"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </button>
+      <div>
+        <h2 class="text-xl font-semibold">Tạo tài khoản mới</h2>
+        <p class="text-sm text-gray-500">Tham gia cộng đồng nhà thuốc Long Châu ngay hôm nay</p>
+      </div>
+    </div>
+
+    <!-- Benefits section -->
+    <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4 mb-6">
+      <h3 class="text-sm font-medium text-green-800 mb-2 flex items-center">
+        <span class="mr-2">🎉</span>
+        Ưu đãi dành cho thành viên mới:
+      </h3>
+      <ul class="text-sm text-green-700 space-y-1">
+        <li class="flex items-center"><span class="mr-2 text-green-600">•</span>Giảm 10% cho đơn hàng đầu tiên</li>
+        <li class="flex items-center"><span class="mr-2 text-green-600">•</span>Tích điểm với mỗi giao dịch</li>
+        <li class="flex items-center"><span class="mr-2 text-green-600">•</span>Nhận thông báo khuyến mãi độc quyền</li>
+        <li class="flex items-center"><span class="mr-2 text-green-600">•</span>Theo dõi đơn hàng dễ dàng</li>
+      </ul>
+    </div>
+
+    <!-- Loading overlay -->
+    <div v-if="isLoading" class="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-xl flex items-center justify-center z-10">
+      <div class="flex flex-col items-center">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+        <p class="text-sm text-gray-600 mt-2">Đang tạo tài khoản...</p>
+      </div>
+    </div>
+
+    <form @submit.prevent="handleSubmit" novalidate>
+      <!-- Full Name -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Họ và tên <span class="text-red-500">*</span>
+        </label>
+        <input
+          v-model="form.fullName"
+          type="text"
+          placeholder="Nhập họ và tên đầy đủ"
+          :class="[
+            'w-full border rounded-lg px-4 py-3 focus:outline-none transition-all',
+            errors.fullName 
+              ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-transparent' 
+              : 'border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent'
+          ]"
+          @blur="validateField('fullName')"
+          @input="clearFieldError('fullName')"
+        />
+        <p v-if="errors.fullName" class="text-xs text-red-500 mt-1 flex items-center">
+          <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
           </svg>
-        </button>
-        <div>
-          <h2 class="text-xl font-semibold">Tạo tài khoản mới</h2>
-          <p class="text-sm text-gray-500">Tham gia cộng đồng Pharmacy ngay hôm nay</p>
-        </div>
+          {{ errors.fullName }}
+        </p>
       </div>
 
-      <!-- Benefits section -->
-      <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-        <h3 class="text-sm font-medium text-green-800 mb-2">🎉 Ưu đãi dành cho thành viên mới:</h3>
-        <ul class="text-sm text-green-700 space-y-1">
-          <li>• Giảm 10% cho đơn hàng đầu tiên</li>
-          <li>• Tích điểm với mỗi giao dịch</li>
-          <li>• Nhận thông báo khuyến mãi độc quyền</li>
-          <li>• Theo dõi đơn hàng dễ dàng</li>
-        </ul>
+      <!-- Email -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Email <span class="text-red-500">*</span>
+        </label>
+        <input
+          v-model="form.email"
+          type="email"
+          placeholder="example@email.com"
+          :class="[
+            'w-full border rounded-lg px-4 py-3 focus:outline-none transition-all',
+            errors.email 
+              ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-transparent' 
+              : 'border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent'
+          ]"
+          @blur="validateField('email')"
+          @input="clearFieldError('email')"
+        />
+        <p v-if="errors.email" class="text-xs text-red-500 mt-1 flex items-center">
+          <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+          {{ errors.email }}
+        </p>
       </div>
 
-      <form @submit.prevent="handleSubmit">
-        <!-- Full Name -->
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Họ và tên <span class="text-red-500">*</span>
-          </label>
-          <input
-            v-model="form.fullName"
-            type="text"
-            placeholder="Nhập họ và tên đầy đủ"
-            class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-            required
-          />
-        </div>
+      <!-- Phone Number -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Số điện thoại <span class="text-red-500">*</span>
+        </label>
+        <input
+          v-model="form.phone"
+          type="tel"
+          placeholder="0xxx xxx xxx"
+          :class="[
+            'w-full border rounded-lg px-4 py-3 focus:outline-none transition-all',
+            errors.phone 
+              ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-transparent' 
+              : 'border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent'
+          ]"
+          @blur="validateField('phone')"
+          @input="clearFieldError('phone')"
+          maxlength="15"
+        />
+        <p v-if="errors.phone" class="text-xs text-red-500 mt-1 flex items-center">
+          <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+          {{ errors.phone }}
+        </p>
+      </div>
 
-        <!-- Email -->
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Email <span class="text-red-500">*</span>
-          </label>
+      <!-- Password -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Mật khẩu <span class="text-red-500">*</span>
+        </label>
+        <div class="relative">
           <input
-            v-model="form.email"
-            type="email"
-            placeholder="example@email.com"
-            class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-            required
+            v-model="form.password"
+            :type="showPassword ? 'text' : 'password'"
+            placeholder="Tối thiểu 8 ký tự"
+            :class="[
+              'w-full border rounded-lg px-4 py-3 pr-12 focus:outline-none transition-all',
+              errors.password 
+                ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-transparent' 
+                : 'border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent'
+            ]"
+            @blur="validateField('password')"
+            @input="clearFieldError('password')"
           />
+          <button
+            type="button"
+            @click="showPassword = !showPassword"
+            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+            tabindex="-1"
+          >
+            <svg v-if="!showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            </svg>
+            <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"/>
+            </svg>
+          </button>
         </div>
-
-        <!-- Phone Number -->
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Số điện thoại <span class="text-red-500">*</span>
-          </label>
-          <input
-            v-model="form.phone"
-            type="tel"
-            placeholder="0xxx xxx xxx"
-            class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-            required
-          />
-        </div>
-
-        <!-- Password -->
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Mật khẩu <span class="text-red-500">*</span>
-          </label>
-          <div class="relative">
-            <input
-              v-model="form.password"
-              :type="showPassword ? 'text' : 'password'"
-              placeholder="Tối thiểu 8 ký tự"
-              class="w-full border border-gray-300 rounded-lg px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-              required
-              minlength="8"
-            />
-            <button
-              type="button"
-              @click="showPassword = !showPassword"
-              class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-            >
-              <svg v-if="!showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-              </svg>
-              <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"/>
-              </svg>
-            </button>
+        
+        <!-- Password strength indicator -->
+        <div v-if="form.password" class="mt-2">
+          <div class="flex gap-1 mb-1">
+            <div 
+              v-for="i in 4" 
+              :key="i"
+              :class="[
+                'h-1 rounded-full flex-1 transition-colors',
+                passwordStrength >= i ? getStrengthColor(passwordStrength) : 'bg-gray-200'
+              ]"
+            ></div>
           </div>
-          <p class="text-xs text-gray-500 mt-1">Mật khẩu phải có ít nhất 8 ký tự</p>
-        </div>
-
-        <!-- Confirm Password -->
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Xác nhận mật khẩu <span class="text-red-500">*</span>
-          </label>
-          <input
-            v-model="form.confirmPassword"
-            type="password"
-            placeholder="Nhập lại mật khẩu"
-            class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-            required
-          />
-          <p v-if="form.password && form.confirmPassword && form.password !== form.confirmPassword" 
-             class="text-xs text-red-500 mt-1">
-            Mật khẩu không khớp
+          <p :class="['text-xs', getStrengthTextColor(passwordStrength)]">
+            {{ getStrengthText(passwordStrength) }}
           </p>
         </div>
-
-        <!-- Date of Birth -->
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Ngày sinh
-          </label>
-          <input
-            v-model="form.dateOfBirth"
-            type="date"
-            class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-          />
-        </div>
-
-        <!-- Gender -->
-        <div class="mb-6">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Giới tính</label>
-          <div class="flex gap-4">
-            <label class="flex items-center">
-              <input v-model="form.gender" type="radio" value="male" class="mr-2 text-green-600">
-              <span class="text-sm">Nam</span>
-            </label>
-            <label class="flex items-center">
-              <input v-model="form.gender" type="radio" value="female" class="mr-2 text-green-600">
-              <span class="text-sm">Nữ</span>
-            </label>
-            <label class="flex items-center">
-              <input v-model="form.gender" type="radio" value="other" class="mr-2 text-green-600">
-              <span class="text-sm">Khác</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Terms and Privacy -->
-        <div class="mb-6">
-          <label class="flex items-start">
-            <input 
-              v-model="form.agreeTerms"
-              type="checkbox" 
-              class="mr-3 mt-0.5 text-green-600 focus:ring-green-500"
-              required
-            >
-            <span class="text-sm text-gray-600 leading-relaxed">
-              Tôi đồng ý với 
-              <a href="#" class="text-green-600 hover:underline">Điều khoản sử dụng</a>
-              và 
-              <a href="#" class="text-green-600 hover:underline">Chính sách bảo mật</a>
-              của Pharmacy
-              <span class="text-red-500">*</span>
-            </span>
-          </label>
-        </div>
-
-        <!-- Marketing consent -->
-        <div class="mb-6">
-          <label class="flex items-start">
-            <input 
-              v-model="form.agreeMarketing"
-              type="checkbox" 
-              class="mr-3 mt-0.5 text-green-600 focus:ring-green-500"
-            >
-            <span class="text-sm text-gray-600">
-              Tôi muốn nhận thông báo về khuyến mãi và sản phẩm mới từ Pharmacy
-            </span>
-          </label>
-        </div>
-
-        <!-- Register button -->
-        <button
-          type="submit"
-          class="w-full bg-green-600 text-white font-semibold py-3 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="!isFormValid"
-        >
-          Tạo tài khoản miễn phí
-        </button>
-
-        <!-- Login redirect -->
-        <p class="text-sm text-center text-gray-600 mt-4">
-          Đã có tài khoản?
-          <button 
-            type="button"
-            class="text-green-600 hover:text-green-700 hover:underline font-medium ml-1" 
-            @click="$emit('back')"
-          >
-            Đăng nhập ngay
-          </button>
+        
+        <p v-if="errors.password" class="text-xs text-red-500 mt-1 flex items-center">
+          <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+          {{ errors.password }}
         </p>
-      </form>
-    </div>
+        <p v-else class="text-xs text-gray-500 mt-1">Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường và số</p>
+      </div>
+
+      <!-- Confirm Password -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Xác nhận mật khẩu <span class="text-red-500">*</span>
+        </label>
+        <input
+          v-model="form.confirmPassword"
+          type="password"
+          placeholder="Nhập lại mật khẩu"
+          :class="[
+            'w-full border rounded-lg px-4 py-3 focus:outline-none transition-all',
+            errors.confirmPassword 
+              ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-transparent' 
+              : 'border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent'
+          ]"
+          @blur="validateField('confirmPassword')"
+          @input="clearFieldError('confirmPassword')"
+        />
+        <p v-if="errors.confirmPassword" class="text-xs text-red-500 mt-1 flex items-center">
+          <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+          {{ errors.confirmPassword }}
+        </p>
+        <p v-else-if="form.password && form.confirmPassword && form.password === form.confirmPassword" 
+           class="text-xs text-green-600 mt-1 flex items-center">
+          <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+          </svg>
+          Mật khẩu khớp
+        </p>
+      </div>
+
+      <!-- Date of Birth -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Ngày sinh
+        </label>
+        <input
+          v-model="form.dateOfBirth"
+          type="date"
+          :max="maxDate"
+          :class="[
+            'w-full border rounded-lg px-4 py-3 focus:outline-none transition-all',
+            errors.dateOfBirth 
+              ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-transparent' 
+              : 'border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent'
+          ]"
+          @blur="validateField('dateOfBirth')"
+          @input="clearFieldError('dateOfBirth')"
+        />
+        <p v-if="errors.dateOfBirth" class="text-xs text-red-500 mt-1 flex items-center">
+          <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+          {{ errors.dateOfBirth }}
+        </p>
+      </div>
+
+      <!-- Gender -->
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Giới tính</label>
+        <div class="flex gap-4">
+          <label class="flex items-center cursor-pointer">
+            <input 
+              v-model="form.gender" 
+              type="radio" 
+              value="male" 
+              class="mr-2 text-green-600 focus:ring-green-500"
+            >
+            <span class="text-sm">Nam</span>
+          </label>
+          <label class="flex items-center cursor-pointer">
+            <input 
+              v-model="form.gender" 
+              type="radio" 
+              value="female" 
+              class="mr-2 text-green-600 focus:ring-green-500"
+            >
+            <span class="text-sm">Nữ</span>
+          </label>
+          <label class="flex items-center cursor-pointer">
+            <input 
+              v-model="form.gender" 
+              type="radio" 
+              value="other" 
+              class="mr-2 text-green-600 focus:ring-green-500"
+            >
+            <span class="text-sm">Khác</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Terms and Privacy -->
+      <div class="mb-4">
+        <label class="flex items-start cursor-pointer group">
+          <input 
+            v-model="form.agreeTerms"
+            type="checkbox" 
+            :class="[
+              'mr-3 mt-0.5 text-green-600 focus:ring-green-500',
+              errors.agreeTerms ? 'border-red-300' : ''
+            ]"
+            @change="clearFieldError('agreeTerms')"
+          >
+          <span class="text-sm text-gray-600 leading-relaxed group-hover:text-gray-800 transition-colors">
+            Tôi đồng ý với 
+            <a href="#" class="text-green-600 hover:text-green-700 hover:underline font-medium">Điều khoản sử dụng</a>
+            và 
+            <a href="#" class="text-green-600 hover:text-green-700 hover:underline font-medium">Chính sách bảo mật</a>
+            của Nhà thuốc Long Châu
+            <span class="text-red-500">*</span>
+          </span>
+        </label>
+        <p v-if="errors.agreeTerms" class="text-xs text-red-500 mt-1 ml-8 flex items-center">
+          <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+          {{ errors.agreeTerms }}
+        </p>
+      </div>
+
+      <!-- Marketing consent -->
+      <div class="mb-6">
+        <label class="flex items-start cursor-pointer group">
+          <input 
+            v-model="form.agreeMarketing"
+            type="checkbox" 
+            class="mr-3 mt-0.5 text-green-600 focus:ring-green-500"
+          >
+          <span class="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">
+            Tôi muốn nhận thông báo về khuyến mãi và sản phẩm mới từ Nhà thuốc Long Châu
+          </span>
+        </label>
+      </div>
+
+      <!-- API Error Display -->
+      <div v-if="apiError" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+        <p class="text-sm text-red-600 flex items-center">
+          <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+          {{ apiError }}
+        </p>
+      </div>
+
+      <!-- Register button -->
+      <button
+        type="submit"
+        :class="[
+          'w-full font-semibold py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all transform',
+          isFormValid && !isLoading
+            ? 'bg-green-600 text-white hover:bg-green-700 hover:scale-[1.02] active:scale-[0.98]'
+            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+        ]"
+        :disabled="!isFormValid || isLoading"
+      >
+        <span v-if="isLoading" class="flex items-center justify-center">
+          <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Đang tạo tài khoản...
+        </span>
+        <span v-else>Tạo tài khoản miễn phí</span>
+      </button>
+
+      <!-- Login redirect -->
+      <p class="text-sm text-center text-gray-600 mt-4">
+        Đã có tài khoản?
+        <button 
+          type="button"
+          class="text-green-600 hover:text-green-700 hover:underline font-medium ml-1 transition-colors" 
+          @click="$emit('back')"
+        >
+          Đăng nhập ngay
+        </button>
+      </p>
+    </form>
+  </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
-defineEmits(['back', 'close'])
+defineEmits(['back', 'close', 'register-success'])
 
 const showPassword = ref(false)
+const isLoading = ref(false)
+const apiError = ref('')
 
 const form = ref({
   fullName: '',
@@ -228,6 +383,137 @@ const form = ref({
   agreeMarketing: false
 })
 
+const errors = ref({
+  fullName: '',
+  email: '',
+  phone: '',
+  password: '',
+  confirmPassword: '',
+  dateOfBirth: '',
+  agreeTerms: ''
+})
+
+// Maximum date (18 years ago from today)
+const maxDate = computed(() => {
+  const date = new Date()
+  date.setFullYear(date.getFullYear() - 18)
+  return date.toISOString().split('T')[0]
+})
+
+// Password strength calculation
+const passwordStrength = computed(() => {
+  const password = form.value.password
+  if (!password) return 0
+  
+  let strength = 0
+  if (password.length >= 8) strength++
+  if (/[a-z]/.test(password)) strength++
+  if (/[A-Z]/.test(password)) strength++
+  if (/[0-9]/.test(password)) strength++
+  if (/[^A-Za-z0-9]/.test(password)) strength++
+  
+  return Math.min(strength, 4)
+})
+
+const getStrengthColor = (strength) => {
+  const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500']
+  return colors[strength - 1] || 'bg-gray-200'
+}
+
+const getStrengthTextColor = (strength) => {
+  const colors = ['text-red-600', 'text-orange-600', 'text-yellow-600', 'text-green-600']
+  return colors[strength - 1] || 'text-gray-500'
+}
+
+const getStrengthText = (strength) => {
+  const texts = ['Rất yếu', 'Yếu', 'Trung bình', 'Mạnh']
+  return texts[strength - 1] || ''
+}
+
+// Validation rules
+const validationRules = {
+  fullName: (value) => {
+    if (!value.trim()) return 'Họ và tên là bắt buộc'
+    if (value.trim().length < 2) return 'Họ và tên phải có ít nhất 2 ký tự'
+    if (!/^[a-zA-ZÀ-ỹ\s]+$/.test(value)) return 'Họ và tên chỉ được chứa chữ cái và khoảng trắng'
+    return ''
+  },
+  
+  email: (value) => {
+    if (!value.trim()) return 'Email là bắt buộc'
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(value)) return 'Email không hợp lệ'
+    return ''
+  },
+  
+  phone: (value) => {
+    if (!value.trim()) return 'Số điện thoại là bắt buộc'
+    const phoneRegex = /^(\+84|84|0)[3|5|7|8|9]\d{8}$/
+    if (!phoneRegex.test(value.replace(/\s/g, ''))) return 'Số điện thoại không hợp lệ'
+    return ''
+  },
+  
+  password: (value) => {
+    if (!value) return 'Mật khẩu là bắt buộc'
+    if (value.length < 8) return 'Mật khẩu phải có ít nhất 8 ký tự'
+    if (!/(?=.*[a-z])/.test(value)) return 'Mật khẩu phải có ít nhất 1 chữ thường'
+    if (!/(?=.*[A-Z])/.test(value)) return 'Mật khẩu phải có ít nhất 1 chữ hoa'
+    if (!/(?=.*\d)/.test(value)) return 'Mật khẩu phải có ít nhất 1 số'
+    return ''
+  },
+  
+  confirmPassword: (value) => {
+    if (!value) return 'Xác nhận mật khẩu là bắt buộc'
+    if (value !== form.value.password) return 'Mật khẩu không khớp'
+    return ''
+  },
+  
+  dateOfBirth: (value) => {
+    if (!value) return ''
+    const birthDate = new Date(value)
+    const today = new Date()
+    const age = today.getFullYear() - birthDate.getFullYear()
+    
+    if (age < 18) return 'Bạn phải từ 18 tuổi trở lên'
+    if (age > 120) return 'Ngày sinh không hợp lệ'
+    return ''
+  },
+  
+  agreeTerms: (value) => {
+    if (!value) return 'Bạn phải đồng ý với điều khoản sử dụng'
+    return ''
+  }
+}
+
+// Validate individual field
+const validateField = (fieldName) => {
+  const rule = validationRules[fieldName]
+  if (rule) {
+    errors.value[fieldName] = rule(form.value[fieldName])
+  }
+}
+
+// Clear field error
+const clearFieldError = (fieldName) => {
+  errors.value[fieldName] = ''
+  apiError.value = ''
+}
+
+// Validate all fields
+const validateForm = () => {
+  let isValid = true
+  
+  Object.keys(validationRules).forEach(fieldName => {
+    validateField(fieldName)
+    if (errors.value[fieldName]) {
+      isValid = false
+    }
+  })
+  
+  return isValid
+}
+
+// Form validity check
 const isFormValid = computed(() => {
   return form.value.fullName && 
          form.value.email && 
@@ -236,15 +522,142 @@ const isFormValid = computed(() => {
          form.value.confirmPassword &&
          form.value.password === form.value.confirmPassword &&
          form.value.password.length >= 8 &&
-         form.value.agreeTerms
+         form.value.agreeTerms &&
+         !Object.values(errors.value).some(error => error) &&
+         passwordStrength.value >= 3
 })
 
-const handleSubmit = () => {
-  if (isFormValid.value) {
-    // Handle registration logic here
-    console.log('Form submitted:', form.value)
-    // You can emit a register event or call an API
-    // $emit('register', form.value)
+// Watch for password changes to revalidate confirm password
+watch(() => form.value.password, () => {
+  if (form.value.confirmPassword && errors.value.confirmPassword) {
+    validateField('confirmPassword')
+  }
+})
+
+// Prepare data for API call
+const prepareApiData = () => {
+  return {
+    fullName: form.value.fullName.trim(),
+    email: form.value.email.trim().toLowerCase(),
+    phone: form.value.phone.replace(/\s/g, ''),
+    password: form.value.password,
+    dateOfBirth: form.value.dateOfBirth || null,
+    gender: form.value.gender || null,
+    agreeMarketing: form.value.agreeMarketing
   }
 }
+
+// Handle form submission
+const handleSubmit = async () => {
+  // Clear previous API error
+  apiError.value = ''
+  
+  // Validate form
+  if (!validateForm()) {
+    // Focus on first error field
+    const firstErrorField = Object.keys(errors.value).find(key => errors.value[key])
+    if (firstErrorField) {
+      document.querySelector(`input[name="${firstErrorField}"], input[v-model*="${firstErrorField}"]`)?.focus()
+    }
+    return
+  }
+
+  if (!isFormValid.value) return
+
+  isLoading.value = true
+
+  try {
+    // Prepare data for API call
+    const apiData = prepareApiData()
+    
+    // TODO: Replace with actual API call
+    console.log('Registration data prepared for API:', apiData)
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    // Simulate random success/failure for demo
+    const success = Math.random() > 0.3
+    
+    if (success) {
+      // Registration successful
+      console.log('Registration successful!')
+      
+      // Reset form
+      resetForm()
+      
+      // Emit success event
+      // $emit('register-success', { user: apiData, message: 'Đăng ký thành công!' })
+      
+      // For now, just show success and close modal
+      alert('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.')
+      
+    } else {
+      // Simulate API error
+      throw new Error('Email này đã được sử dụng. Vui lòng chọn email khác.')
+    }
+    
+  } catch (error) {
+    console.error('Registration error:', error)
+    
+    // Handle specific API errors
+    if (error.message.includes('email')) {
+      errors.value.email = error.message
+    } else if (error.message.includes('phone')) {
+      errors.value.phone = error.message  
+    } else {
+      apiError.value = error.message || 'Có lỗi xảy ra trong quá trình đăng ký. Vui lòng thử lại.'
+    }
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// Reset form
+const resetForm = () => {
+  form.value = {
+    fullName: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
+    dateOfBirth: '',
+    gender: '',
+    agreeTerms: false,
+    agreeMarketing: false
+  }
+  
+  errors.value = {
+    fullName: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
+    dateOfBirth: '',
+    agreeTerms: ''
+  }
+  
+  apiError.value = ''
+}
+
+// Example API service function (to implement later)
+/*
+const registerUser = async (userData) => {
+  const response = await fetch('/api/auth/register', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(userData)
+  })
+  
+  if (!response.ok) {
+    const errorData = await response.json()
+    throw new Error(errorData.message || 'Registration failed')
+  }
+  
+  return await response.json()
+}
+*/
+
 </script>

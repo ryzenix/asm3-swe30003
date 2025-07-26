@@ -1,4 +1,3 @@
-<!-- components/AuthOverlay.vue -->
 <template>
   <transition name="fade">
     <div
@@ -13,13 +12,25 @@
             v-if="current === 'login'"
             key="login"
             @switch="switchToRegister"
+            @manager-login="switchToSuperuser"
             @close="emit('close')"
+            @auth-success="handleAuthSuccess"
           />
           <RegisterModal
-            v-else
+            v-else-if="current === 'register'"
             key="register"
             @back="switchToLogin"
             @close="emit('close')"
+            @auth-success="handleAuthSuccess"
+          />
+          <SuperuserModal
+            v-else-if="current === 'superuser'"
+            key="superuser"
+            :isLoggedIn="isLoggedIn"
+            :user="user"
+            @back="switchToLogin"
+            @close="emit('close')"
+            @auth-success="handleAuthSuccess"
           />
         </transition>
       </div>
@@ -31,11 +42,21 @@
 import { ref, watch, onUnmounted } from 'vue'
 import LoginModal from './LoginModal.vue'
 import RegisterModal from './RegisterModal.vue'
+import SuperuserModal from './SuperuserModal.vue'
 
-const props = defineProps({ visible: Boolean })
-const emit = defineEmits(['close'])
+const props = defineProps({
+  visible: Boolean,
+  isLoggedIn: Boolean,
+  user: Object
+})
+const emit = defineEmits(['close', 'auth-success'])
 
 const current = ref('login')
+
+// Handle auth success from child modals
+const handleAuthSuccess = () => {
+  emit('auth-success')
+}
 
 // Disable/enable body scroll
 const disableScroll = () => {
@@ -70,13 +91,17 @@ onUnmounted(() => {
   enableScroll()
 })
 
-// Smooth transitions between modals
+// Modal navigation functions
 const switchToRegister = () => {
   current.value = 'register'
 }
 
 const switchToLogin = () => {
   current.value = 'login'
+}
+
+const switchToSuperuser = () => {
+  current.value = 'superuser'
 }
 </script>
 

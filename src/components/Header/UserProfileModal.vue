@@ -131,11 +131,11 @@
 // import { ref } from 'vue'
 
 const roleDetails = {
-  user: {
+  client: {
     label: 'Khách hàng',
     color: 'text-blue-600'
   },
-  admin: {
+  pharmacist: {
     label: 'Dược sĩ',
     color: 'text-green-600'
   },
@@ -153,7 +153,7 @@ const props = defineProps({
       name: 'Nguyễn Văn A',
       email: 'user@example.com',
       phone: '0123 456 789',
-      role: 'user'
+      role: 'client'
     })
   }
 })

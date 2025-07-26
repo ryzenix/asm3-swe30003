@@ -14,7 +14,7 @@ export function useAuth() {
         email: '',
         name: '',
         phone: '',
-        role: 'user'
+        role: 'client'
     })
 
     // Check authentication status by querying the server
@@ -57,7 +57,7 @@ export function useAuth() {
                 email: '',
                 name: '',
                 phone: '',
-                role: 'user'
+                role: 'client'
             }
             await nextTick()
             return false
@@ -80,7 +80,7 @@ export function useAuth() {
                     email: '',
                     name: '',
                     phone: '',
-                    role: 'user'
+                    role: 'client'
                 }
             }
             await nextTick()

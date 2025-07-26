@@ -3,7 +3,7 @@
     <!-- Close Button -->
     <button
       @click="$emit('close')"
-      class="absolute top-3 right-3 text-gray-400 hover:text-black text-xl transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 rounded-full w-8 h-8 flex items-center justify-center"
+      class="absolute top-3 right-3 text-gray-400 hover:text-black hover:bg-gray-100 text-xl transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 rounded-full w-8 h-8 flex items-center justify-center"
       aria-label="Đóng"
     >
       &times;

@@ -244,9 +244,16 @@ const props = defineProps({
   },
   user: {
     type: Object,
-    default: () => null
+    default: () => ({
+      name: 'Nguyễn Văn A',
+      email: 'user@example.com',
+      phone: '0123 456 789',
+      role: 'client'
+    })
   }
-})
+});
+
+console.log(props.user)
 
 // Define emits
 const emit = defineEmits(['open-login', 'open-cart', 'navigation-click', 'search', 'logout'])
@@ -366,7 +373,9 @@ const toggleMobileSearch = () => {
 }
 
 const toggleUserProfile = () => {
-  showUserProfile.value = !showUserProfile.value
+  showUserProfile.value = !showUserProfile.value;
+
+  console.log('User profile toggled:', props.user)
   if (showUserProfile.value) {
     showMobileMenu.value = false
     showMobileSearch.value = false

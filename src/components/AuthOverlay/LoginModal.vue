@@ -128,13 +128,23 @@
       </div>
 
       <!-- API Error Display -->
-      <div v-if="apiError" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-        <p class="text-sm text-red-600 flex items-center">
-          <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+      <div v-if="apiError.message" class="mb-4 p-3 rounded-lg" :class="getErrorDisplayClass(apiError.code)">
+        <div class="flex items-start">
+          <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
           </svg>
-          {{ apiError }}
-        </p>
+          <div class="flex-1">
+            <p class="text-sm font-medium">{{ apiError.message }}</p>
+            <!-- Show remaining attempts for authentication failures -->
+            <div v-if="apiError.code === 'AUTHENTICATION_FAILED' && apiError.remainingAttempts !== undefined" class="mt-1">
+              <p class="text-xs">Còn lại {{ apiError.remainingAttempts }} lần thử</p>
+            </div>
+            <!-- Show retry time for rate limiting -->
+            <div v-if="apiError.code === 'RATE_LIMITED' && apiError.retryAfter" class="mt-1">
+              <p class="text-xs">Thử lại sau {{ formatTime(apiError.retryAfter) }}</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Login attempts warning -->
@@ -143,7 +153,7 @@
           <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
           </svg>
-          Bạn còn {{ remainingAttempts }} lần thử. Tài khoản sẽ bị khóa tạm thời nếu nhập sai thêm.
+          Bạn còn {{ remainingAttempts }} lần thử. Đăng nhập sẽ bị khóa tạm thời nếu nhập sai thêm.
         </p>
       </div>
 
@@ -166,7 +176,7 @@
           Đang đăng nhập...
         </span>
         <span v-else-if="isBlocked">
-          Tài khoản tạm khóa ({{ formatTime(blockTimeRemaining) }})
+          Đăng nhập tạm khóa ({{ formatTime(blockTimeRemaining) }})
         </span>
         <span v-else>Đăng nhập</span>
       </button>
@@ -181,8 +191,6 @@
         <span class="px-4 bg-white text-gray-500">Hoặc</span>
       </div>
     </div>
-
-    <!-- Social login options -->
 
     <!-- Manager login button -->
     <button
@@ -216,15 +224,30 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 
-defineEmits(['switch', 'close', 'manager-login', 'auth-success'])
+const emit = defineEmits(['switch', 'close', 'manager-login', 'auth-success'])
+
+// Error code to Vietnamese message mapping
+const ERROR_MESSAGES = {
+  MISSING_FIELDS: 'Vui lòng nhập đầy đủ thông tin bắt buộc',
+  INVALID_FORMAT: 'Định dạng không hợp lệ',
+  AUTHENTICATION_FAILED: 'Email hoặc mật khẩu không chính xác',
+  AUTHORIZATION_FAILED: 'Không có quyền truy cập',
+  USER_NOT_FOUND: 'Tài khoản không tồn tại hoặc đã bị vô hiệu hóa',
+  USER_EXISTS: 'Email này đã được sử dụng',
+  RATE_LIMITED: 'Quá nhiều lần đăng nhập thất bại. Vui lòng thử lại sau',
+  SERVER_ERROR: 'Lỗi máy chủ. Vui lòng thử lại sau',
+  VALIDATION_ERROR: 'Thông tin không hợp lệ',
+  PASSWORD_WEAK: 'Mật khẩu không đủ mạnh',
+  ACCOUNT_BLOCKED: 'Tài khoản đã bị khóa tạm thời'
+}
 
 // Form state
 const showPassword = ref(false)
 const isLoading = ref(false)
-const apiError = ref('')
-const loginAttempts = ref(0)
+const apiError = ref({})
+const remainingAttempts = ref(5)
 const isBlocked = ref(false)
 const blockTimeRemaining = ref(0)
 let blockTimer = null
@@ -251,7 +274,7 @@ const validationRules = {
   
   password: (value) => {
     if (!value) return 'Mật khẩu là bắt buộc'
-    if (value.length < 6) return 'Mật khẩu phải có ít nhất 6 ký tự'
+    if (value.length < 8) return 'Mật khẩu phải có ít nhất 8 ký tự'
     return ''
   }
 }
@@ -263,8 +286,31 @@ const isFormValid = computed(() => {
          !Object.values(errors.value).some(error => error)
 })
 
-const remainingAttempts = computed(() => Math.max(0, 5 - loginAttempts.value))
-const showAttemptsWarning = computed(() => loginAttempts.value >= 3 && loginAttempts.value < 5)
+const showAttemptsWarning = computed(() => remainingAttempts.value <= 2 && remainingAttempts.value > 0)
+
+// Error handling utilities
+const getErrorMessage = (errorCode, fallbackMessage = '') => {
+  console.log(ERROR_MESSAGES[errorCode])
+  return ERROR_MESSAGES[errorCode] || fallbackMessage || 'Có lỗi xảy ra. Vui lòng thử lại'
+}
+
+const getErrorDisplayClass = (errorCode) => {
+  const baseClasses = 'border'
+  
+  switch (errorCode) {
+    case 'RATE_LIMITED':
+      return `${baseClasses} bg-red-50 border-red-200 text-red-600`
+    case 'AUTHENTICATION_FAILED':
+      return `${baseClasses} bg-orange-50 border-orange-200 text-orange-600`
+    case 'MISSING_FIELDS':
+    case 'INVALID_FORMAT':
+      return `${baseClasses} bg-yellow-50 border-yellow-200 text-yellow-600`
+    case 'SERVER_ERROR':
+      return `${baseClasses} bg-gray-50 border-gray-200 text-gray-600`
+    default:
+      return `${baseClasses} bg-red-50 border-red-200 text-red-600`
+  }
+}
 
 // Validation functions
 const validateField = (fieldName) => {
@@ -276,7 +322,7 @@ const validateField = (fieldName) => {
 
 const clearFieldError = (fieldName) => {
   errors.value[fieldName] = ''
-  apiError.value = ''
+  apiError.value = {}
 }
 
 const validateForm = () => {
@@ -299,7 +345,7 @@ const formatTime = (seconds) => {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
-const startBlockTimer = (duration = 300) => { // 5 minutes default
+const startBlockTimer = (duration = 300) => {
   isBlocked.value = true
   blockTimeRemaining.value = duration
   
@@ -308,24 +354,97 @@ const startBlockTimer = (duration = 300) => { // 5 minutes default
     if (blockTimeRemaining.value <= 0) {
       clearInterval(blockTimer)
       isBlocked.value = false
-      loginAttempts.value = 0
+      remainingAttempts.value = 5
+      apiError.value = {}
     }
   }, 1000)
+}
+
+// API Service Functions
+const loginUser = async (credentials) => {
+  const response = await fetch('http://localhost:3000/auth/user/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(credentials)
+  })
+  
+  const data = await response.json()
+  
+  if (!response.ok) {
+    const error = new Error(data.error?.message || 'Login failed')
+    error.errorData = data.error || {}
+    error.status = response.status
+    throw error
+  }
+  
+  return data
 }
 
 // Prepare data for API call
 const prepareApiData = () => {
   return {
     email: loginForm.value.email.trim().toLowerCase(),
-    password: loginForm.value.password,
-    rememberMe: loginForm.value.rememberMe
+    password: loginForm.value.password
+  }
+}
+
+// Handle standardized API errors
+const handleApiError = (error) => {
+  // console.error('API Error:', error)
+  
+  const errorData = error.errorData || {}
+  const errorCode = errorData.code
+  const errorMessage = getErrorMessage(errorCode, errorData.message)
+  console.log(errorMessage)
+  
+  // Update API error display
+  apiError.value = {
+    ...errorData,
+    code: errorCode,
+    message: errorMessage
+  }
+
+  // Handle specific error types
+  switch (errorCode) {
+    case 'RATE_LIMITED':
+      isBlocked.value = true
+      if (errorData.retryAfter || errorData.secondsRemaining) {
+        startBlockTimer(errorData.retryAfter || errorData.secondsRemaining)
+      }
+      break
+      
+    case 'AUTHENTICATION_FAILED':
+      if (typeof errorData.remainingAttempts === 'number') {
+        remainingAttempts.value = errorData.remainingAttempts
+      }
+      break
+      
+    case 'MISSING_FIELDS':
+      // Highlight missing fields
+      if (errorData.fields && Array.isArray(errorData.fields)) {
+        errorData.fields.forEach(field => {
+          if (validationRules[field]) {
+            errors.value[field] = `${field === 'email' ? 'Email' : 'Mật khẩu'} là bắt buộc`
+          }
+        })
+      }
+      break
+      
+    case 'INVALID_FORMAT':
+      if (errorData.field) {
+        errors.value[errorData.field] = errorMessage
+      }
+      break
   }
 }
 
 // Main login handler
 const handleLogin = async () => {
   // Clear previous errors
-  apiError.value = ''
+  apiError.value = {}
   
   // Check if blocked
   if (isBlocked.value) return
@@ -344,83 +463,23 @@ const handleLogin = async () => {
   isLoading.value = true
 
   try {
-    // Prepare data for API call
     const apiData = prepareApiData()
+    console.log('Attempting login with:', { email: apiData.email })
     
-    // TODO: Replace with actual API call
-    console.log('Login data prepared for API:', apiData)
+    const response = await loginUser(apiData)
+    console.log('Login successful:', response)
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    // Reset on success
+    remainingAttempts.value = 5
+    isBlocked.value = false
+    resetForm()
     
-    // Simulate random success/failure for demo
-    const success = Math.random() > 0.4
-    
-    if (success) {
-      // Login successful
-      console.log('Login successful!')
-      
-      // Reset attempts on success
-      loginAttempts.value = 0
-      
-      // Reset form
-      resetForm()
-      
-      // Emit success event with user data
-      // $emit('auth-success', { user: userData, token: token })
-      
-      // For now, just show success
-      alert('Đăng nhập thành công!')
-      
-    } else {
-      // Simulate login failure
-      loginAttempts.value++
-      
-      if (loginAttempts.value >= 5) {
-        startBlockTimer()
-        throw new Error('Tài khoản đã bị khóa tạm thời do nhập sai quá nhiều lần. Vui lòng thử lại sau 5 phút.')
-      } else {
-        throw new Error('Email hoặc mật khẩu không chính xác. Vui lòng thử lại.')
-      }
-    }
+    emit('auth-success')
+    emit('close')
     
   } catch (error) {
-    console.error('Login error:', error)
-    
-    // Handle specific API errors
-    if (error.message.includes('email')) {
-      errors.value.email = error.message
-    } else if (error.message.includes('password') || error.message.includes('mật khẩu')) {
-      errors.value.password = error.message
-    } else {
-      apiError.value = error.message || 'Có lỗi xảy ra trong quá trình đăng nhập. Vui lòng thử lại.'
-    }
-  } finally {
-    isLoading.value = false
-  }
-}
-
-// Social login handler
-const handleSocialLogin = async (provider) => {
-  if (isLoading.value) return
-  
-  isLoading.value = true
-  apiError.value = ''
-  
-  try {
-    console.log(`Attempting ${provider} login`)
-    
-    // Simulate social login
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    // TODO: Implement actual social login
-    // const result = await socialLoginService(provider)
-    
-    alert(`Đăng nhập ${provider} thành công!`)
-    
-  } catch (error) {
-    console.error(`${provider} login error:`, error)
-    apiError.value = `Không thể đăng nhập bằng ${provider}. Vui lòng thử lại.`
+    // console.error('Login error:', error)
+    handleApiError(error)
   } finally {
     isLoading.value = false
   }
@@ -428,8 +487,6 @@ const handleSocialLogin = async (provider) => {
 
 // Forgot password handler
 const handleForgotPassword = () => {
-  // TODO: Implement forgot password flow
-  // This could open a modal or navigate to forgot password page
   alert('Tính năng quên mật khẩu sẽ được triển khai sớm!')
   console.log('Forgot password clicked')
 }
@@ -447,7 +504,7 @@ const resetForm = () => {
     password: ''
   }
   
-  apiError.value = ''
+  apiError.value = {}
 }
 
 // Cleanup
@@ -456,41 +513,4 @@ onUnmounted(() => {
     clearInterval(blockTimer)
   }
 })
-
-// Example API service functions (to implement later)
-/*
-const loginUser = async (credentials) => {
-  const response = await fetch('/api/auth/login', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(credentials)
-  })
-  
-  if (!response.ok) {
-    const errorData = await response.json()
-    throw new Error(errorData.message || 'Login failed')
-  }
-  
-  return await response.json()
-}
-
-const socialLoginService = async (provider) => {
-  // Implement social login logic
-  // This would typically involve OAuth flows
-  const response = await fetch(`/api/auth/${provider}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    }
-  })
-  
-  if (!response.ok) {
-    throw new Error(`${provider} login failed`)
-  }
-  
-  return await response.json()
-}
-*/
 </script>

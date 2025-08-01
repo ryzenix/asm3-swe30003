@@ -40,16 +40,16 @@
 
         <!-- Search bar - Hidden on mobile, shown on tablet+ -->
         <div class="flex-1 mx-4 hidden md:block max-w-2xl">
-          <div class="relative">
-            <input 
-              type="text" 
-              placeholder="Tìm thuốc, bệnh lý, thực phẩm chức năng..." 
-              class="w-full px-4 py-3 pr-12 rounded-lg text-black text-sm bg-white shadow-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-300 focus:border-transparent" 
+        <div class="relative">
+            <input
+                type="text"
+                placeholder="Tìm thuốc, bệnh lý, thực phẩm chức năng..."
+                class="w-full px-4 py-3 pr-12 rounded-lg text-black text-sm bg-white shadow-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-300 focus:border-transparent"
             />
-            <button class="absolute right-1 top-1 bottom-1 bg-green-500 px-4 rounded-md hover:bg-green-600 transition-colors">
-              <i class="fas fa-search text-white"></i>
+            <button class="absolute right-1 md:top-1 md:bottom-1 mobile-search-button bg-green-500 px-4 py-2 md:py-0 rounded-md hover:bg-green-600 transition-colors flex items-center justify-center">
+                <i class="fas fa-search text-white"></i>
             </button>
-          </div>
+        </div>
           <div class="text-xs text-white mt-2 space-x-3 hidden lg:block opacity-90">
             <span 
               v-for="keyword in searchKeywords" 
@@ -147,7 +147,19 @@
 
       <!-- Mobile Search Bar - Now stays below logo -->
       <div v-if="showMobileSearch" class="mt-4 md:hidden animate-slideDown">
-        <div class="relative">
+          <div class="flex">
+    <input 
+      type="text" 
+      placeholder="Tìm thuốc, bệnh lý, thực phẩm chức năng..." 
+      class="flex-grow px-4 py-3 rounded-l-lg text-black text-sm bg-white shadow-sm border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-300"
+    />
+    <button 
+      class="bg-green-500 px-4 py-3 rounded-r-lg hover:bg-green-600 transition-colors flex items-center justify-center"
+    >
+      <i class="fas fa-search text-white text-sm"></i>
+    </button>
+  </div>
+        <!-- <div class="relative">
           <input 
             type="text" 
             placeholder="Tìm thuốc, bệnh lý, thực phẩm chức năng..." 
@@ -156,7 +168,7 @@
           <button class="absolute right-1 top-1/2 transform -translate-y-1/2 bg-green-500 px-2 py-1.5 rounded-md hover:bg-green-600 transition-colors">
             <i class="fas fa-search text-white text-sm"></i>
           </button>
-        </div>
+        </div> -->
         <div class="text-xs text-white mt-2 flex flex-wrap gap-2 opacity-90">
           <span 
             v-for="keyword in searchKeywords" 

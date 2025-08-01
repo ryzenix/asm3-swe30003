@@ -52,7 +52,7 @@
               errors.fullName 
                 ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-transparent' 
                 : 'border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent'
-            ]" @blur="validateField('fullName')" @input="clearFieldError('fullName')" />
+            ]" @blur="validateField('fullName')" @input="clearFieldError('fullName')" autocomplete="name" />
           <p v-if="errors.fullName" class="text-xs text-red-500 mt-1 flex items-center">
             <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd"
@@ -73,7 +73,7 @@
               errors.email 
                 ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-transparent' 
                 : 'border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent'
-            ]" @blur="validateField('email')" @input="clearFieldError('email')" />
+            ]" @blur="validateField('email')" @input="clearFieldError('email')" autocomplete="email" />
           <p v-if="errors.email" class="text-xs text-red-500 mt-1 flex items-center">
             <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd"
@@ -94,7 +94,7 @@
               errors.phone 
                 ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-transparent' 
                 : 'border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent'
-            ]" @blur="validateField('phone')" @input="clearFieldError('phone')" maxlength="15" />
+            ]" @blur="validateField('phone')" @input="clearFieldError('phone')" maxlength="15" autocomplete="tel" />
           <p v-if="errors.phone" class="text-xs text-red-500 mt-1 flex items-center">
             <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd"
@@ -117,7 +117,7 @@
                 errors.password 
                   ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-transparent' 
                   : 'border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent'
-              ]" @blur="validateField('password')" @input="clearFieldError('password')" />
+              ]" @blur="validateField('password')" @input="clearFieldError('password')" autocomplete="new-password" />
             <button type="button" @click="showPassword = !showPassword"
               class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
               tabindex="-1">
@@ -155,8 +155,7 @@
             </svg>
             {{ errors.password }}
           </p>
-          <p v-else class="text-xs text-gray-500 mt-1">Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường và
-            số</p>
+          <p v-else class="text-xs text-gray-500 mt-1">Mật khẩu phải có ít nhất 8 ký tự</p>
         </div>
 
         <!-- Confirm Password -->
@@ -169,7 +168,7 @@
               errors.confirmPassword 
                 ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-transparent' 
                 : 'border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent'
-            ]" @blur="validateField('confirmPassword')" @input="clearFieldError('confirmPassword')" />
+            ]" @blur="validateField('confirmPassword')" @input="clearFieldError('confirmPassword')" autocomplete="new-password" />
           <p v-if="errors.confirmPassword" class="text-xs text-red-500 mt-1 flex items-center">
             <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd"
@@ -267,15 +266,19 @@
         </div>
 
         <!-- API Error Display -->
-        <div v-if="apiError" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p class="text-sm text-red-600 flex items-center">
-            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                clip-rule="evenodd" />
+        <div v-if="apiError.message" class="mb-4 p-3 rounded-lg" :class="getErrorDisplayClass(apiError.code)">
+          <div class="flex items-start">
+            <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
             </svg>
-            {{ apiError }}
-          </p>
+            <div class="flex-1">
+              <p class="text-sm font-medium">{{ apiError.message }}</p>
+              <!-- Show additional error details if available -->
+              <div v-if="apiError.details" class="mt-1">
+                <p class="text-xs">{{ apiError.details }}</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Register button -->
@@ -366,25 +369,394 @@
 </template>
 
 <script setup>
-  import {
-    ref,
-    computed,
-    watch
-  } from 'vue'
+import { ref, computed, watch } from 'vue'
 
-  const emit = defineEmits(['back', 'close', 'auth-success'])
+const emit = defineEmits(['back', 'close', 'auth-success'])
 
-  const showPassword = ref(false)
-  const isLoading = ref(false)
-  const apiError = ref('')
-  const showSuccess = ref(false)
-  const registeredUser = ref(null)
-  const successMessage = ref('')
+// Error code to Vietnamese message mapping (matching backend ERROR_CODES)
+const ERROR_MESSAGES = {
+  VALIDATION_ERROR: 'Thông tin không hợp lệ',
+  AUTHENTICATION_FAILED: 'Email hoặc mật khẩu không chính xác',
+  AUTHORIZATION_FAILED: 'Không có quyền truy cập',
+  USER_NOT_FOUND: 'Tài khoản không tồn tại hoặc đã bị vô hiệu hóa',
+  USER_EXISTS: 'Email này đã được sử dụng',
+  RATE_LIMITED: 'Quá nhiều yêu cầu. Vui lòng thử lại sau',
+  SERVER_ERROR: 'Lỗi máy chủ. Vui lòng thử lại sau',
+  MISSING_FIELDS: 'Vui lòng nhập đầy đủ thông tin bắt buộc',
+  INVALID_FORMAT: 'Định dạng không hợp lệ',  
+  PASSWORD_WEAK: 'Mật khẩu không đủ mạnh',
+  ACCOUNT_BLOCKED: 'Tài khoản đã bị khóa tạm thời'
+}
 
-  // API configuration
-  const API_BASE_URL = 'http://localhost:3000'
+// Form state
+const showPassword = ref(false)
+const isLoading = ref(false)
+const apiError = ref({})
+const showSuccess = ref(false)
+const registeredUser = ref(null)
+const successMessage = ref('')
 
-  const form = ref({
+const form = ref({
+  fullName: '',
+  email: '',
+  phone: '',
+  password: '',
+  confirmPassword: '',
+  dateOfBirth: '',
+  gender: '',
+  agreeTerms: false,
+  agreeMarketing: false
+})
+
+const errors = ref({
+  fullName: '',
+  email: '',
+  phone: '',
+  password: '',
+  confirmPassword: '',
+  dateOfBirth: '',
+  agreeTerms: ''
+})
+
+// Maximum date (18 years ago from today)
+const maxDate = computed(() => {
+  const date = new Date()
+  date.setFullYear(date.getFullYear() - 18)
+  return date.toISOString().split('T')[0]
+})
+
+// Password strength calculation
+const passwordStrength = computed(() => {
+  const password = form.value.password
+  if (!password) return 0
+
+  let strength = 0
+  if (password.length >= 8) strength++
+  if (/[a-z]/.test(password)) strength++
+  if (/[A-Z]/.test(password)) strength++
+  if (/[0-9]/.test(password)) strength++
+  if (/[^A-Za-z0-9]/.test(password)) strength++
+
+  return Math.min(strength, 4)
+})
+
+const getStrengthColor = (strength) => {
+  const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500']
+  return colors[strength - 1] || 'bg-gray-200'
+}
+
+const getStrengthTextColor = (strength) => {
+  const colors = ['text-red-600', 'text-orange-600', 'text-yellow-600', 'text-green-600']
+  return colors[strength - 1] || 'text-gray-500'
+}
+
+const getStrengthText = (strength) => {
+  const texts = ['Rất yếu', 'Yếu', 'Trung bình', 'Mạnh']
+  return texts[strength - 1] || ''
+}
+
+// Validation rules
+const validationRules = {
+  fullName: (value) => {
+    if (!value.trim()) return 'Họ và tên là bắt buộc'
+    if (value.trim().length < 2) return 'Họ và tên phải có ít nhất 2 ký tự'
+    if (!/^[a-zA-ZÀ-ỹ\s]+$/.test(value)) return 'Họ và tên chỉ được chứa chữ cái và khoảng trắng'
+    return ''
+  },
+
+  email: (value) => {
+    if (!value.trim()) return 'Email là bắt buộc'
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(value)) return 'Email không hợp lệ'
+    return ''
+  },
+
+  phone: (value) => {
+    if (!value.trim()) return 'Số điện thoại là bắt buộc'
+    const phoneRegex = /^(\+84|84|0)[3|5|7|8|9]\d{8}$/
+    if (!phoneRegex.test(value.replace(/\s/g, ''))) return 'Số điện thoại không hợp lệ'
+    return ''
+  },
+
+  password: (value) => {
+    if (!value) return 'Mật khẩu là bắt buộc'
+    if (value.length < 8) return 'Mật khẩu phải có ít nhất 8 ký tự'
+    return ''
+  },
+
+  confirmPassword: (value) => {
+    if (!value) return 'Xác nhận mật khẩu là bắt buộc'
+    if (value !== form.value.password) return 'Mật khẩu không khớp'
+    return ''
+  },
+
+  dateOfBirth: (value) => {
+    if (!value) return ''
+    const birthDate = new Date(value)
+    const today = new Date()
+    const age = today.getFullYear() - birthDate.getFullYear()
+
+    if (age < 18) return 'Bạn phải từ 18 tuổi trở lên'
+    if (age > 120) return 'Ngày sinh không hợp lệ'
+    return ''
+  },
+
+  agreeTerms: (value) => {
+    if (!value) return 'Bạn phải đồng ý với điều khoản sử dụng'
+    return ''
+  }
+}
+
+// Error handling utilities (matching LoginModal pattern)
+const getErrorMessage = (errorCode, fallbackMessage = '') => {
+  return ERROR_MESSAGES[errorCode] || fallbackMessage || 'Có lỗi xảy ra. Vui lòng thử lại'
+}
+
+const getErrorDisplayClass = (errorCode) => {
+  const baseClasses = 'border'
+  
+  switch (errorCode) {
+    case 'USER_EXISTS':
+      return `${baseClasses} bg-orange-50 border-orange-200 text-orange-600`
+    case 'MISSING_FIELDS':
+    case 'INVALID_FORMAT':
+    case 'VALIDATION_ERROR':
+      return `${baseClasses} bg-yellow-50 border-yellow-200 text-yellow-600`
+    case 'PASSWORD_WEAK':
+      return `${baseClasses} bg-red-50 border-red-200 text-red-600`
+    case 'SERVER_ERROR':
+      return `${baseClasses} bg-gray-50 border-gray-200 text-gray-600`
+    default:
+      return `${baseClasses} bg-red-50 border-red-200 text-red-600`
+  }
+}
+
+// Validate individual field
+const validateField = (fieldName) => {
+  const rule = validationRules[fieldName]
+  if (rule) {
+    errors.value[fieldName] = rule(form.value[fieldName])
+  }
+}
+
+// Clear field error
+const clearFieldError = (fieldName) => {
+  errors.value[fieldName] = ''
+  apiError.value = {}
+}
+
+// Validate all fields
+const validateForm = () => {
+  let isValid = true
+
+  Object.keys(validationRules).forEach(fieldName => {
+    validateField(fieldName)
+    if (errors.value[fieldName]) {
+      isValid = false
+    }
+  })
+
+  return isValid
+}
+
+// Form validity check
+const isFormValid = computed(() => {
+  return form.value.fullName &&
+    form.value.email &&
+    form.value.phone &&
+    form.value.password &&
+    form.value.confirmPassword &&
+    form.value.password === form.value.confirmPassword &&
+    form.value.password.length >= 8 &&
+    form.value.agreeTerms &&
+    !Object.values(errors.value).some(error => error)
+})
+
+// Watch for password changes to revalidate confirm password
+watch(() => form.value.password, () => {
+  if (form.value.confirmPassword && errors.value.confirmPassword) {
+    validateField('confirmPassword')
+  }
+})
+
+// API Service Functions
+const checkEmailExists = async (email) => {
+  try {
+    const response = await fetch('http://localhost:3000/auth/user/check-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ email })
+    })
+
+    const data = await response.json()
+    
+    if (!response.ok) {
+      throw new Error(data.error?.message || 'Failed to check email')
+    }
+
+    return data.data?.exists || false
+  } catch (error) {
+    console.error('Email check error:', error)
+    return false
+  }
+}
+
+const registerUser = async (userData) => {
+  const response = await fetch('http://localhost:3000/auth/user/register', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(userData)
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    const error = new Error(data.error?.message || 'Registration failed')
+    error.errorData = data.error || {}
+    error.status = response.status
+    throw error
+  }
+
+  return data
+}
+
+// Prepare data for API call
+const prepareApiData = () => {
+  return {
+    fullName: form.value.fullName.trim(),
+    email: form.value.email.trim().toLowerCase(),
+    phone: form.value.phone.replace(/\s/g, ''),
+    password: form.value.password,
+    dateOfBirth: form.value.dateOfBirth || null,
+    gender: form.value.gender || null,
+    role: 'client' // Default role for pharmacy customers
+  }
+}
+
+// Handle standardized API errors (matching LoginModal pattern)
+const handleApiError = (error) => {
+  console.error('API Error:', error)
+  
+  const errorData = error.errorData || {}
+  const errorCode = errorData.code
+  const errorMessage = getErrorMessage(errorCode, errorData.message)
+  
+  // Update API error display
+  apiError.value = {
+    ...errorData,
+    code: errorCode,
+    message: errorMessage
+  }
+
+  // Handle specific error types
+  switch (errorCode) {
+    case 'USER_EXISTS':
+      errors.value.email = errorMessage
+      break
+      
+    case 'MISSING_FIELDS':
+      // Highlight missing fields
+      if (errorData.fields && Array.isArray(errorData.fields)) {
+        errorData.fields.forEach(field => {
+          if (validationRules[field]) {
+            const fieldName = {
+              email: 'Email',
+              password: 'Mật khẩu',
+              fullName: 'Họ và tên',
+              phone: 'Số điện thoại'
+            }[field] || field
+            errors.value[field] = `${fieldName} là bắt buộc`
+          }
+        })
+      }
+      break
+      
+    case 'INVALID_FORMAT':
+      if (errorData.field) {
+        errors.value[errorData.field] = errorMessage
+      }
+      break
+      
+    case 'PASSWORD_WEAK':
+      errors.value.password = errorMessage
+      break
+      
+    case 'VALIDATION_ERROR':
+      if (errorData.field) {
+        errors.value[errorData.field] = errorMessage
+      }
+      break
+  }
+}
+
+// Handle form submission
+const handleSubmit = async () => {
+  // Clear previous errors
+  apiError.value = {}
+
+  // Validate form
+  if (!validateForm()) {
+    const firstErrorField = Object.keys(errors.value).find(key => errors.value[key])
+    if (firstErrorField) {
+      document.querySelector(`input[v-model*="${firstErrorField}"]`)?.focus()
+    }
+    return
+  }
+
+  if (!isFormValid.value) return
+
+  isLoading.value = true
+
+  try {
+    // Check email availability before registration
+    const emailExists = await checkEmailExists(form.value.email)
+    if (emailExists) {
+      errors.value.email = 'Email này đã được sử dụng'
+      isLoading.value = false
+      return
+    }
+
+    const apiData = prepareApiData()
+    console.log('Attempting registration with:', { email: apiData.email })
+
+    const response = await registerUser(apiData)
+    console.log('Registration successful:', response)
+
+    // Store the registered user data and success message
+    registeredUser.value = response.user
+    successMessage.value = response.message || 'Đăng ký thành công!'
+
+    // Show success screen  
+    showSuccess.value = true
+
+    // Auto-close after 3 seconds and emit auth success
+    setTimeout(() => {
+      emit('auth-success')
+    }, 3000)
+
+  } catch (error) {
+    console.error('Registration error:', error)
+    handleApiError(error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// Close modal and emit auth success
+const closeModal = () => {
+  emit('auth-success')
+  emit('close')
+}
+
+// Reset form
+const resetForm = () => {
+  form.value = {
     fullName: '',
     email: '',
     phone: '',
@@ -394,9 +766,9 @@
     gender: '',
     agreeTerms: false,
     agreeMarketing: false
-  })
+  }
 
-  const errors = ref({
+  errors.value = {
     fullName: '',
     email: '',
     phone: '',
@@ -404,339 +776,14 @@
     confirmPassword: '',
     dateOfBirth: '',
     agreeTerms: ''
-  })
-
-  // Maximum date (18 years ago from today)
-  const maxDate = computed(() => {
-    const date = new Date()
-    date.setFullYear(date.getFullYear() - 18)
-    return date.toISOString().split('T')[0]
-  })
-
-  // Password strength calculation
-  const passwordStrength = computed(() => {
-    const password = form.value.password
-    if (!password) return 0
-
-    let strength = 0
-    if (password.length >= 8) strength++
-    if (/[a-z]/.test(password)) strength++
-    if (/[A-Z]/.test(password)) strength++
-    if (/[0-9]/.test(password)) strength++
-    if (/[^A-Za-z0-9]/.test(password)) strength++
-
-    return Math.min(strength, 4)
-  })
-
-  const getStrengthColor = (strength) => {
-    const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500']
-    return colors[strength - 1] || 'bg-gray-200'
   }
 
-  const getStrengthTextColor = (strength) => {
-    const colors = ['text-red-600', 'text-orange-600', 'text-yellow-600', 'text-green-600']
-    return colors[strength - 1] || 'text-gray-500'
-  }
+  apiError.value = {}
+  showSuccess.value = false
+  registeredUser.value = null
+  successMessage.value = ''
+}
 
-  const getStrengthText = (strength) => {
-    const texts = ['Rất yếu', 'Yếu', 'Trung bình', 'Mạnh']
-    return texts[strength - 1] || ''
-  }
-
-  // Validation rules
-  const validationRules = {
-    fullName: (value) => {
-      if (!value.trim()) return 'Họ và tên là bắt buộc'
-      if (value.trim().length < 2) return 'Họ và tên phải có ít nhất 2 ký tự'
-      if (!/^[a-zA-ZÀ-ỹ\s]+$/.test(value)) return 'Họ và tên chỉ được chứa chữ cái và khoảng trắng'
-      return ''
-    },
-
-    email: (value) => {
-      if (!value.trim()) return 'Email là bắt buộc'
-
-      // Disallow accented and non-ASCII characters 
-      const asciiOnly = /^[\x00-\x7F]+$/
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(value)) return 'Email không hợp lệ'
-
-      return ''
-    },
-
-    phone: (value) => {
-      if (!value.trim()) return 'Số điện thoại là bắt buộc'
-      const phoneRegex = /^(\+84|84|0)[3|5|7|8|9]\d{8}$/
-      if (!phoneRegex.test(value.replace(/\s/g, ''))) return 'Số điện thoại không hợp lệ'
-      return ''
-    },
-
-    password: (value) => {
-      if (!value) return 'Mật khẩu là bắt buộc'
-      if (value.length < 8) return 'Mật khẩu phải có ít nhất 8 ký tự'
-      if (!/(?=.*[a-z])/.test(value)) return 'Mật khẩu phải có ít nhất 1 chữ thường'
-      if (!/(?=.*[A-Z])/.test(value)) return 'Mật khẩu phải có ít nhất 1 chữ hoa'
-      if (!/(?=.*\d)/.test(value)) return 'Mật khẩu phải có ít nhất 1 số'
-      return ''
-    },
-
-    confirmPassword: (value) => {
-      if (!value) return 'Xác nhận mật khẩu là bắt buộc'
-      if (value !== form.value.password) return 'Mật khẩu không khớp'
-      return ''
-    },
-
-    dateOfBirth: (value) => {
-      if (!value) return ''
-      const birthDate = new Date(value)
-      const today = new Date()
-      const age = today.getFullYear() - birthDate.getFullYear()
-
-      if (age < 18) return 'Bạn phải từ 18 tuổi trở lên'
-      if (age > 120) return 'Ngày sinh không hợp lệ'
-      return ''
-    },
-
-    agreeTerms: (value) => {
-      if (!value) return 'Bạn phải đồng ý với điều khoản sử dụng'
-      return ''
-    }
-  }
-
-  // API Service Functions
-  const checkEmailExists = async (email) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/user/check-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          email
-        })
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to check email')
-      }
-
-      const data = await response.json()
-      return data.exists
-    } catch (error) {
-      console.error('Email check error:', error)
-      return false
-    }
-  }
-
-  const registerUser = async (userData) => {
-    const response = await fetch(`${API_BASE_URL}/auth/user/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(userData)
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Registration failed')
-    }
-
-    return await response.json()
-  }
-
-  // Validate individual field
-  const validateField = async (fieldName) => {
-    const rule = validationRules[fieldName]
-    if (rule) {
-      errors.value[fieldName] = rule(form.value[fieldName])
-    }
-
-    // // Additional async validation for email
-    // if (fieldName === 'email' && !errors.value.email && form.value.email) {
-    //   const emailExists = await checkEmailExists(form.value.email)
-    //   if (emailExists) {
-    //     errors.value.email = 'Email này đã được sử dụng'
-    //   }
-    // }
-  }
-
-  // Clear field error
-  const clearFieldError = (fieldName) => {
-    errors.value[fieldName] = ''
-    apiError.value = ''
-  }
-
-  // Validate all fields
-  const validateForm = () => {
-    let isValid = true
-
-    Object.keys(validationRules).forEach(fieldName => {
-      const rule = validationRules[fieldName]
-      if (rule) {
-        errors.value[fieldName] = rule(form.value[fieldName])
-        if (errors.value[fieldName]) {
-          isValid = false
-        }
-      }
-    })
-
-    return isValid
-  }
-
-  // Form validity check
-  const isFormValid = computed(() => {
-    return form.value.fullName &&
-      form.value.email &&
-      form.value.phone &&
-      form.value.password &&
-      form.value.confirmPassword &&
-      form.value.password === form.value.confirmPassword &&
-      form.value.password.length >= 8 &&
-      form.value.agreeTerms &&
-      !Object.values(errors.value).some(error => error) &&
-      passwordStrength.value >= 3
-  })
-
-  // Watch for password changes to revalidate confirm password
-  watch(() => form.value.password, () => {
-    if (form.value.confirmPassword && errors.value.confirmPassword) {
-      validateField('confirmPassword')
-    }
-  })
-
-  // Prepare data for API call
-  const prepareApiData = () => {
-    return {
-      fullName: form.value.fullName.trim(),
-      email: form.value.email.trim().toLowerCase(),
-      phone: form.value.phone.replace(/\s/g, ''),
-      password: form.value.password,
-      role: 'client', // Default role for pharmacy customers
-      // Optional fields - only include if provided
-      ...(form.value.dateOfBirth && {
-        dateOfBirth: form.value.dateOfBirth
-      }),
-      ...(form.value.gender && {
-        gender: form.value.gender
-      }),
-      agreeMarketing: form.value.agreeMarketing
-    }
-  }
-
-  // Handle form submission
-  const handleSubmit = async () => {
-    // Clear previous API error
-    apiError.value = ''
-
-    // Validate form
-    if (!validateForm()) {
-      // Focus on first error field
-      const firstErrorField = Object.keys(errors.value).find(key => errors.value[key])
-      if (firstErrorField) {
-        const fieldElement = document.querySelector(`input[v-model*="${firstErrorField}"]`)
-        if (fieldElement) {
-          fieldElement.focus()
-        }
-      }
-      return
-    }
-
-    if (!isFormValid.value) return
-
-    isLoading.value = true
-
-    try {
-      // Check email availability one more time before registration
-      const emailExists = await checkEmailExists(form.value.email)
-      if (emailExists) {
-        errors.value.email = 'Email này đã được sử dụng'
-        isLoading.value = false
-        return
-      }
-
-      // Prepare data for API call
-      const apiData = prepareApiData()
-
-      console.log('Registration data prepared for API:', apiData)
-
-      // Call registration API
-      const result = await registerUser(apiData)
-
-      console.log('Registration successful!', result)
-
-      // Store the registered user data and success message
-      registeredUser.value = result.user
-      successMessage.value = result.message || 'Đăng ký thành công!'
-
-      // Show success screen
-      showSuccess.value = true
-
-      // Auto-close after 3 seconds and emit auth success
-      setTimeout(() => {
-        emit('auth-success')
-      }, 3000)
-
-    } catch (error) {
-      console.error('Registration error:', error)
-
-      // Handle specific API errors
-      const errorMessage = error.message
-
-      if (errorMessage.includes('email') || errorMessage.includes('Email')) {
-        errors.value.email = errorMessage
-      } else if (errorMessage.includes('phone') || errorMessage.includes('điện thoại')) {
-        errors.value.phone = errorMessage
-      } else if (errorMessage.includes('password') || errorMessage.includes('mật khẩu')) {
-        errors.value.password = errorMessage
-      } else if (errorMessage.includes('fullName') || errorMessage.includes('tên')) {
-        errors.value.fullName = errorMessage
-      } else {
-        // General API error
-        apiError.value = errorMessage || 'Có lỗi xảy ra trong quá trình đăng ký. Vui lòng thử lại.'
-      }
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  // Close modal and emit auth success
-  const closeModal = () => {
-    emit('auth-success');
-    emit('close');
-  }
-
-  // Reset form
-  const resetForm = () => {
-    form.value = {
-      fullName: '',
-      email: '',
-      phone: '',
-      password: '',
-      confirmPassword: '',
-      dateOfBirth: '',
-      gender: '',
-      agreeTerms: false,
-      agreeMarketing: false
-    }
-
-    errors.value = {
-      fullName: '',
-      email: '',
-      phone: '',
-      password: '',
-      confirmPassword: '',
-      dateOfBirth: '',
-      agreeTerms: ''
-    }
-
-    apiError.value = ''
-    showSuccess.value = false
-    registeredUser.value = null
-    successMessage.value = ''
-  }
-
-  // Reset form on component mount
-  resetForm()
+// Reset form on component mount
+resetForm()
 </script>

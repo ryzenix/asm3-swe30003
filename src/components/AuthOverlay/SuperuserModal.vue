@@ -169,21 +169,6 @@
     return challengeData;
   }
 
-  // Check for stored credentials
-  const checkCredentials = async () => {
-    try {
-      const response = await fetch('http://localhost/api/auth/check-auth-status.php', {
-        method: 'GET',
-        credentials: 'same-origin'
-      });
-      const data = await response.json();
-      hasStoredCredentials.value = data.authenticated || false;
-    } catch (error) {
-      console.error('Error checking credentials:', error);
-      hasStoredCredentials.value = false;
-    }
-  }
-
   // Authenticate superuser with passkey
   const authenticateSuperuser = async () => {
     try {
@@ -268,7 +253,6 @@
 
     // Check login status and credentials
     await checkSession();
-    await checkCredentials();
     if (!props.isLoggedIn || !hasStoredCredentials.value) {
       updateStatus('Vui lòng đăng nhập bằng passkey của bạn (Face ID, Touch ID)', 'error');
       return;

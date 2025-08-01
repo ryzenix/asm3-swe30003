@@ -37,6 +37,18 @@
           </svg>
           <span class="text-gray-600">{{ user.phone }}</span>
         </div>
+        <div v-if="user.gender" class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          <span class="text-gray-600">{{ getGenderText(user.gender) }}</span>
+        </div>
+        <div v-if="user.dateOfBirth" class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span class="text-gray-600">{{ formatDate(user.dateOfBirth) }}</span>
+        </div>
       </div>
     </div>
 
@@ -110,6 +122,47 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>
       </button>
+
+      <!-- User Management (Only for superuser) - Now as Router Link -->
+      <router-link
+        v-if="user.role === 'superuser'"
+        to="/staff"
+        @click="$emit('close')"
+        class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition-all text-left"
+      >
+        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+        <!-- <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+        </svg> -->
+        <div>
+          <div class="font-medium text-gray-800">Quản lý tài khoản</div>
+          <div class="text-xs text-gray-500">Quản lý người dùng hệ thống</div>
+        </div>
+        <svg class="w-4 h-4 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </router-link>
+
+      <!-- Product Management (Only for superuser) -->
+      <router-link
+        v-if="user.role === 'superuser'"
+        to="/admin/products"
+        @click="$emit('close')"
+        class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition-all text-left"
+      >
+        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+        </svg>
+        <div>
+          <div class="font-medium text-gray-800">Quản lý sản phẩm</div>
+          <div class="text-xs text-gray-500">Tạo, chỉnh sửa và quản lý sản phẩm</div>
+        </div>
+        <svg class="w-4 h-4 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </router-link>
     </div>
 
     <hr class="border-gray-200 mb-4">
@@ -148,22 +201,17 @@ const roleDetails = {
 // Define props to receive user data
 const props = defineProps({
   user: {
-    type: Object,
-    default: () => ({
-      name: 'Nguyễn Văn A',
-      email: 'user@example.com',
-      phone: '0123 456 789',
-      role: 'client'
-    })
+    type: Object
   }
 })
 
-// Define emits
+// Define emits (removed 'user-management' since we're using router-link now)
 const emit = defineEmits(['close', 'logout', 'view-orders', 'edit-profile', 'address-book', 'favorites']);
 
 // Event handlers
 const handleLogout = () => {
   // Emit logout event to parent component
+  
   emit('logout')
 }
 
@@ -189,6 +237,34 @@ const handleFavorites = () => {
   // Emit favorites event and close modal
   emit('favorites')
   emit('close')
+}
+
+// Helper functions
+const getGenderText = (gender) => {
+  const genders = {
+    male: 'Nam',
+    female: 'Nữ',
+    other: 'Khác'
+  }
+  return genders[gender] || gender
+}
+
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A'
+  
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return 'N/A'
+    
+    return date.toLocaleDateString('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    })
+  } catch (error) {
+    console.warn('Invalid date format:', dateString)
+    return 'N/A'
+  }
 }
 </script>
 

@@ -14,7 +14,9 @@ export function useAuth() {
         email: '',
         name: '',
         phone: '',
-        role: 'client'
+        role: 'client',
+        gender: '',
+        dateOfBirth: ''
     })
 
     // Check authentication status by querying the server
@@ -33,7 +35,9 @@ export function useAuth() {
                     email: data.user.email,
                     name: data.user.fullName || "Default User", // Handle optional fullName field
                     phone: data.user.phone || "123456789", // Handle optional phone field,
-                    role: data.user.role || "user" // Handle optional role field
+                    role: data.user.role || "user", // Handle optional role field
+                    gender: data.user.gender || "", // Handle optional gender field
+                    dateOfBirth: data.user.dateOfBirth || "" // Handle optional dateOfBirth field
                 }
             } else {
                 isLoggedIn.value = false
@@ -41,7 +45,10 @@ export function useAuth() {
                     id: '',
                     email: '',
                     name: '',
-                    phone: ''
+                    phone: '',
+                    role: 'client',
+                    gender: '',
+                    dateOfBirth: ''
                 }
             }
 
@@ -57,7 +64,9 @@ export function useAuth() {
                 email: '',
                 name: '',
                 phone: '',
-                role: 'client'
+                role: 'client',
+                gender: '',
+                dateOfBirth: ''
             }
             await nextTick()
             return false
@@ -80,7 +89,9 @@ export function useAuth() {
                     email: '',
                     name: '',
                     phone: '',
-                    role: 'client'
+                    role: 'client',
+                    gender: '',
+                    dateOfBirth: ''
                 }
             }
             await nextTick()

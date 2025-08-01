@@ -140,10 +140,6 @@ const filters = [
     options: ["Dưới 100.000đ", "100.000đ đến 300.000đ", "300.000đ đến 500.000đ", "Trên 500.000đ"],
   },
   {
-    label: "Mùi vị / Mùi hương",
-    options: ["Tất cả", "Vani", "Vị Cam", "Vị Dâu", "Hương cam"],
-  },
-  {
     label: "Nhà sản xuất",
     options: ["Pharmacity", "Dược Hậu Giang", "Mega We Care", "Traphaco"],
   },
@@ -160,7 +156,11 @@ const allProducts = [
     image: "/products/siro-labebe.webp",
     category: "Trẻ em",
     manufacturer: "Pharmacity",
-    flavor: "Vị Cam"
+    stockQuantity: 150,
+    status: "available",
+    sku: "SIRO001",
+    expiryDate: "2024-12-31",
+    requiresPrescription: false
   },
   {
     id: 2,
@@ -171,7 +171,11 @@ const allProducts = [
     image: "/products/immuvita.webp",
     category: "Người trưởng thành",
     manufacturer: "Mega We Care",
-    flavor: "Tất cả"
+    stockQuantity: 200,
+    status: "available",
+    sku: "IMMU002",
+    expiryDate: "2025-06-30",
+    requiresPrescription: false
   },
   {
     id: 3,
@@ -182,7 +186,11 @@ const allProducts = [
     image: "/products/canxi-d3.webp",
     category: "Trẻ em",
     manufacturer: "Dược Hậu Giang",
-    flavor: "Vani"
+    stockQuantity: 25,
+    status: "low_stock",
+    sku: "CANX003",
+    expiryDate: "2024-10-15",
+    requiresPrescription: false
   },
   {
     id: 4,
@@ -193,7 +201,11 @@ const allProducts = [
     image: "/products/cordyceps.webp",
     category: "Người lớn",
     manufacturer: "Traphaco",
-    flavor: "Tất cả"
+    stockQuantity: 0,
+    status: "out_of_stock",
+    sku: "CORD004",
+    expiryDate: "2024-08-20",
+    requiresPrescription: false
   },
   {
     id: 5,
@@ -205,7 +217,11 @@ const allProducts = [
     discount: 10,
     category: "Người cao tuổi",
     manufacturer: "Mega We Care",
-    flavor: "Tất cả"
+    stockQuantity: 80,
+    status: "available",
+    sku: "OMEG005",
+    expiryDate: "2025-03-15",
+    requiresPrescription: false
   },
   {
     id: 6,
@@ -216,7 +232,11 @@ const allProducts = [
     image: "/products/vitamin-c.webp",
     category: "Người trưởng thành",
     manufacturer: "Pharmacity",
-    flavor: "Vị Cam"
+    stockQuantity: 300,
+    status: "available",
+    sku: "VITC006",
+    expiryDate: "2025-01-20",
+    requiresPrescription: false
   },
   {
     id: 7,
@@ -227,8 +247,12 @@ const allProducts = [
     image: "/products/probiotics.webp",
     category: "Trẻ em",
     manufacturer: "Dược Hậu Giang",
-    flavor: "Vị Dâu",
-    discount: 15
+    discount: 15,
+    stockQuantity: 45,
+    status: "low_stock",
+    sku: "PROB007",
+    expiryDate: "2024-11-30",
+    requiresPrescription: false
   },
   {
     id: 8,
@@ -239,7 +263,11 @@ const allProducts = [
     image: "/products/glucosamine.webp",
     category: "Người cao tuổi",
     manufacturer: "Traphaco",
-    flavor: "Tất cả"
+    stockQuantity: 120,
+    status: "available",
+    sku: "GLUC008",
+    expiryDate: "2025-05-10",
+    requiresPrescription: false
   },
   {
     id: 9,
@@ -250,7 +278,11 @@ const allProducts = [
     image: "/products/siro-ho.webp",
     category: "Trẻ em",
     manufacturer: "Pharmacity",
-    flavor: "Hương cam"
+    stockQuantity: 0,
+    status: "out_of_stock",
+    sku: "SIRO009",
+    expiryDate: "2024-09-05",
+    requiresPrescription: false
   }
 ]
 
@@ -258,7 +290,6 @@ const allProducts = [
 const activeFilters = reactive({
   "Đối tượng sử dụng": [],
   "Giá bán": [],
-  "Mùi vị / Mùi hương": [],
   "Nhà sản xuất": []
 })
 
@@ -281,8 +312,6 @@ const filteredProducts = computed(() => {
               return option === "Tất cả" || product.category === option
             case "Giá bán":
               return checkPriceRange(product.priceValue, option)
-            case "Mùi vị / Mùi hương":
-              return option === "Tất cả" || product.flavor === option
             case "Nhà sản xuất":
               return product.manufacturer === option
             default:
@@ -327,6 +356,15 @@ const paginatedProducts = computed(() => {
 })
 
 // Methods
+const getStatusText = (status) => {
+  switch (status) {
+    case 'available': return 'Có sẵn'
+    case 'low_stock': return 'Sắp hết hàng'
+    case 'out_of_stock': return 'Hết hàng'
+    default: return 'Không xác định'
+  }
+}
+
 const checkPriceRange = (price, range) => {
   switch (range) {
     case "Dưới 100.000đ":

@@ -20,12 +20,14 @@
 
 <script setup>
 import { ref, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import Navigation from './components/Header/Navigation.vue'
 import Footer from './components/Footer.vue'
 import AuthOverlay from './components/AuthOverlay/AuthOverlay.vue'
 import { useAuth } from './composables/useAuth.js'
 
 const showAuth = ref(false)
+const router = useRouter()
 
 // Use the auth composable
 const { isLoggedIn, user, logout, forceLoginStateUpdate } = useAuth();
@@ -36,5 +38,7 @@ const { isLoggedIn, user, logout, forceLoginStateUpdate } = useAuth();
 const handleLogout = async () => {
   await logout()
   showAuth.value = false
+  // Navigate to home view after logout
+  router.push('/')
 }
 </script>

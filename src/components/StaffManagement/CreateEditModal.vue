@@ -2,7 +2,7 @@
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="show" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" @click="$emit('close')">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden transform transition-all duration-300" @click.stop>
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden transform transition-all duration-300 relative" @click.stop>
           <!-- Modal Header -->
           <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-5">
             <div class="flex items-center justify-between">
@@ -23,10 +23,25 @@
               </div>
               <button
                 @click="$emit('close')"
-                class="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors duration-200"
+                :disabled="saving"
+                :class="[
+                  'p-2 rounded-full transition-colors duration-200',
+                  saving 
+                    ? 'text-white/40 cursor-not-allowed' 
+                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                ]"
               >
                 <i class="fas fa-times text-lg"></i>
               </button>
+            </div>
+          </div>
+
+          <!-- Loading overlay -->
+          <div v-if="saving" class="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-2xl flex items-center justify-center z-50">
+            <div class="flex flex-col items-center">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span class="text-sm text-gray-600 mt-2">{{ isEditing ? 'Đang cập nhật...' : 'Đang tạo tài khoản...' }}</span>
+              <p class="text-xs text-gray-500 mt-1">Vui lòng chờ trong giây lát</p>
             </div>
           </div>
           
@@ -68,9 +83,11 @@
                 v-model="form.fullName"
                 type="text" 
                 required
+                :disabled="saving"
                 placeholder="Nhập họ và tên đầy đủ"
                 :class="[
                   'w-full px-4 py-3.5 border rounded-xl transition-all duration-200',
+                  saving ? 'bg-gray-100 cursor-not-allowed' : '',
                   formValidation.fullName.isValid
                     ? 'border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
                     : 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-red-50'
@@ -95,9 +112,11 @@
                 v-model="form.email"
                 type="email" 
                 required
+                :disabled="saving"
                 placeholder="example@pharmacy.com"
                 :class="[
                   'w-full px-4 py-3.5 border rounded-xl transition-all duration-200',
+                  saving ? 'bg-gray-100 cursor-not-allowed' : '',
                   formValidation.email.isValid
                     ? 'border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
                     : 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-red-50'
@@ -122,9 +141,11 @@
                 v-model="form.phone"
                 type="tel" 
                 required
+                :disabled="saving"
                 placeholder="0xxx xxx xxx"
                 :class="[
                   'w-full px-4 py-3.5 border rounded-xl transition-all duration-200',
+                  saving ? 'bg-gray-100 cursor-not-allowed' : '',
                   formValidation.phone.isValid
                     ? 'border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
                     : 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-red-50'
@@ -149,11 +170,15 @@
                 Trạng thái hoạt động
               </label>
               <div class="flex items-center space-x-3">
-                <label class="flex items-center cursor-pointer">
+                <label :class="[
+                  'flex items-center',
+                  saving ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                ]">
                   <input 
                     v-model="form.isActive" 
                     type="radio" 
                     :value="true"
+                    :disabled="saving"
                     class="sr-only"
                   />
                   <div :class="[
@@ -164,11 +189,15 @@
                   </div>
                   <span class="text-sm text-gray-700">Đang hoạt động</span>
                 </label>
-                <label class="flex items-center cursor-pointer">
+                <label :class="[
+                  'flex items-center',
+                  saving ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                ]">
                   <input 
                     v-model="form.isActive" 
                     type="radio" 
                     :value="false"
+                    :disabled="saving"
                     class="sr-only"
                   />
                   <div :class="[

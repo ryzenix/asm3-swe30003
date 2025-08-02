@@ -80,6 +80,18 @@ export function useAuth() {
     // Logout by calling server-side logout endpoint
     const logout = async () => {
         try {
+            
+            isLoggedIn.value = false
+            user.value = {
+                id: '',
+                email: '',
+                name: '',
+                phone: '',
+                role: 'client',
+                gender: '',
+                dateOfBirth: ''
+            }
+            console.log('Auth: Starting logout process, updating local state. isLoggedIn:', isLoggedIn.value, 'user:', user.value)
             const response = await fetch('http://localhost:3000/auth/logout', {
                 method: 'POST',
                 credentials: 'include' // Include session cookies
@@ -87,16 +99,10 @@ export function useAuth() {
             const data = await response.json()
 
             if (response.ok && data.success) {
-                isLoggedIn.value = false
-                user.value = {
-                    id: '',
-                    email: '',
-                    name: '',
-                    phone: '',
-                    role: 'client',
-                    gender: '',
-                    dateOfBirth: ''
-                }
+
+                console.log("Auth: Server logout successful")
+            } else {
+                console.warn('Auth: Server logout failed:', data)
             }
             await nextTick()
         } catch (error) {

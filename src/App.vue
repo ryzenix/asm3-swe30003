@@ -37,7 +37,9 @@ const { isLoggedIn, user, isLoading, logout, forceLoginStateUpdate } = useAuth()
 
 // Handle logout from navigation
 const handleLogout = async () => {
+  console.log('App: Logout requested')
   await logout()
+  console.log('App: Logout completed, hiding auth overlay and navigating to home')
   showAuth.value = false
   // Navigate to home view after logout
   router.push('/')

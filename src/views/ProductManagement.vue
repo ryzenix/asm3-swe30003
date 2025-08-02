@@ -173,7 +173,7 @@
                 <div class="col-span-3">
                   <div class="flex items-center">
                     <img 
-                      :src="product.image" 
+                      :src="getProductImage(product)" 
                       :alt="product.title"
                       class="w-12 h-12 rounded-lg object-cover border border-gray-200"
                       @error="handleImageError"
@@ -198,7 +198,9 @@
                   </div>
                 </div>
                 <div class="col-span-2">
-                  <div class="text-sm font-medium text-gray-900">{{ product.price }}</div>
+                  <div class="text-sm font-medium text-gray-900">
+                    {{ formatPrice(product.priceValue || product.price) }}
+                  </div>
                   <div v-if="product.discount" class="text-xs text-red-600">
                     Giảm {{ product.discount }}%
                   </div>
@@ -275,7 +277,7 @@
                     class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
                   <img 
-                    :src="product.image" 
+                    :src="getProductImage(product)" 
                     :alt="product.title"
                     class="w-16 h-16 rounded-lg object-cover border border-gray-200"
                     @error="handleImageError"
@@ -328,7 +330,7 @@
                   </div>
                   <div>
                     <span class="text-gray-600">Giá:</span>
-                    <span class="font-medium text-gray-900 ml-1">{{ product.price }}</span>
+                    <span class="font-medium text-gray-900 ml-1">{{ formatPrice(product.priceValue || product.price) }}</span>
                   </div>
                   <div>
                     <span class="text-gray-600">Tồn kho:</span>
@@ -695,6 +697,27 @@ const getStatusText = (status) => {
   }
 }
 
+const getProductImage = (product) => {
+  // Handle backend response structure
+  if (product.images && product.images.length > 0) {
+    const mainIndex = product.mainImageIndex || 0
+    return product.images[mainIndex] || product.images[0]
+  }
+  // Fallback to single image field
+  return product.image || '/img/products/placeholder-product.jpg'
+}
+
+const formatPrice = (price) => {
+  if (!price) return 'N/A'
+  // If price is already formatted (string), return as is
+  if (typeof price === 'string' && price.includes('đ')) {
+    return price
+  }
+  // If price is a number, format it
+  const numPrice = parseInt(price)
+  return numPrice.toLocaleString('vi-VN') + 'đ'
+}
+
 const handleImageError = (event) => {
   event.target.src = '/img/products/placeholder-product.jpg'
 }
@@ -734,6 +757,7 @@ const saveProduct = async (productData) => {
       if (response.success) {
         showSuccessMessage('Đã cập nhật sản phẩm thành công')
         await fetchProducts() // Refresh the list
+        closeModal() // Only close on success
       } else {
         throw new Error(response.error || 'Failed to update product')
       }
@@ -743,14 +767,16 @@ const saveProduct = async (productData) => {
       if (response.success) {
         showSuccessMessage('Đã tạo sản phẩm mới thành công')
         await fetchProducts() // Refresh the list
+        closeModal() // Only close on success
       } else {
         throw new Error(response.error || 'Failed to create product')
       }
     }
-    closeModal()
   } catch (err) {
     console.error('Save product error:', err)
+    // Don't close modal on error - let the modal handle the error display
     showSuccessMessage(`Lỗi: ${err.message}`)
+    throw err // Re-throw to let the modal handle it
   }
 }
 

@@ -4,7 +4,7 @@ import { useErrorHandler } from '../composables/useErrorHandler.js'
 const API_BASE_URL = 'http://localhost:3000/management/users'
 
 export function useStaffApi() {
-  const { makeApiRequest, handleApiError } = useErrorHandler()
+  const { makeApiRequest } = useErrorHandler()
 
   // Get staff list with filters and pagination
   const getStaffList = async (params = {}) => {

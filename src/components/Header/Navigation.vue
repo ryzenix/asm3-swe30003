@@ -255,7 +255,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import NavigationDropdown from './NavigationDropdown.vue'
 import UserProfileModal from './UserProfileModal.vue'
 
@@ -436,6 +436,7 @@ const handleSearchKeyword = (keyword) => {
 
 // User action handlers
 const handleLogout = () => {
+  console.log('Navigation: Logout initiated, closing dropdown')
   showUserProfile.value = false
   emit('logout')
 }
@@ -463,6 +464,15 @@ const handleFavorites = () => {
   // You can emit an event to parent or handle routing here
   emit('favorites')
 }
+
+// Watch for logout to ensure dropdown closes
+watch(() => props.isLoggedIn, (newValue, oldValue) => {
+  console.log('Navigation: isLoggedIn changed from', oldValue, 'to', newValue)
+  if (!newValue) {
+    console.log('Navigation: User logged out, forcing dropdown close')
+    showUserProfile.value = false
+  }
+})
 
 // Click outside directive
 const vClickOutside = {

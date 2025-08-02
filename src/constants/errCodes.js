@@ -1,96 +1,92 @@
-// Frontend: constants/errorCodes.js
+// Frontend: constants/errorCodes.js - Updated to match API reference
 export const ERROR_CODES = {
-  // Authentication Errors (AUTH_xxx)
-  AUTH_MISSING_CREDENTIALS: 'AUTH_MISSING_CREDENTIALS',
-  AUTH_INVALID_CREDENTIALS: 'AUTH_INVALID_CREDENTIALS',
-  AUTH_USER_NOT_FOUND: 'AUTH_USER_NOT_FOUND',
-  AUTH_USER_INACTIVE: 'AUTH_USER_INACTIVE',
-  AUTH_ACCOUNT_LOCKED: 'AUTH_ACCOUNT_LOCKED',
-  AUTH_TOO_MANY_ATTEMPTS: 'AUTH_TOO_MANY_ATTEMPTS',
-  AUTH_TOKEN_EXPIRED: 'AUTH_TOKEN_EXPIRED',
-  AUTH_TOKEN_INVALID: 'AUTH_TOKEN_INVALID',
-  AUTH_NOT_AUTHENTICATED: 'AUTH_NOT_AUTHENTICATED',
-  AUTH_INSUFFICIENT_PERMISSIONS: 'AUTH_INSUFFICIENT_PERMISSIONS',
+  // 400 - Validation Errors
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+  DUPLICATE_ENTRY: 'DUPLICATE_ENTRY',
+  REFERENCE_ERROR: 'REFERENCE_ERROR',
+  REQUIRED_FIELD_MISSING: 'REQUIRED_FIELD_MISSING',
+  INVALID_INPUT_FORMAT: 'INVALID_INPUT_FORMAT',
+  
+  // 401 - Authentication Errors
+  AUTHENTICATION_FAILED: 'AUTHENTICATION_FAILED',
+  INVALID_TOKEN: 'INVALID_TOKEN',
+  
+  // 403 - Authorization Errors
+  AUTHORIZATION_FAILED: 'AUTHORIZATION_FAILED',
+  
+  // 404 - Not Found Errors
+  NOT_FOUND: 'NOT_FOUND',
+  ROUTE_NOT_FOUND: 'ROUTE_NOT_FOUND',
+  
+  // 409 - Conflict Errors
+  CONFLICT_ERROR: 'CONFLICT_ERROR',
+  
+  // 422 - Business Logic Errors
+  BUSINESS_LOGIC_ERROR: 'BUSINESS_LOGIC_ERROR',
+  
+  // 429 - Rate Limiting
+  RATE_LIMITED: 'RATE_LIMITED',
+  
+  // 500 - Server Errors
+  INTERNAL_SERVER_ERROR: 'INTERNAL_SERVER_ERROR',
+  DATABASE_ERROR: 'DATABASE_ERROR',
+  
+  // 502 - External Service Errors
+  EXTERNAL_SERVICE_ERROR: 'EXTERNAL_SERVICE_ERROR',
+  
+  // Special Cases
+  FILE_TOO_LARGE: 'FILE_TOO_LARGE',
+  INVALID_JSON: 'INVALID_JSON',
 
-  // Validation Errors (VALIDATION_xxx)
-  VALIDATION_REQUIRED_FIELD: 'VALIDATION_REQUIRED_FIELD',
-  VALIDATION_INVALID_EMAIL: 'VALIDATION_INVALID_EMAIL',
-  VALIDATION_INVALID_PHONE: 'VALIDATION_INVALID_PHONE',
-  VALIDATION_WEAK_PASSWORD: 'VALIDATION_WEAK_PASSWORD',
-  VALIDATION_PASSWORD_MISMATCH: 'VALIDATION_PASSWORD_MISMATCH',
-  VALIDATION_INVALID_DATE: 'VALIDATION_INVALID_DATE',
-  VALIDATION_INVALID_ROLE: 'VALIDATION_INVALID_ROLE',
-  VALIDATION_NAME_TOO_SHORT: 'VALIDATION_NAME_TOO_SHORT',
-  VALIDATION_NAME_INVALID_CHARS: 'VALIDATION_NAME_INVALID_CHARS',
-  VALIDATION_AGE_RESTRICTION: 'VALIDATION_AGE_RESTRICTION',
-
-  // Resource Errors (RESOURCE_xxx)
-  RESOURCE_NOT_FOUND: 'RESOURCE_NOT_FOUND',
-  RESOURCE_ALREADY_EXISTS: 'RESOURCE_ALREADY_EXISTS',
-  RESOURCE_EMAIL_EXISTS: 'RESOURCE_EMAIL_EXISTS',
-  RESOURCE_PHONE_EXISTS: 'RESOURCE_PHONE_EXISTS',
-  RESOURCE_ACCESS_DENIED: 'RESOURCE_ACCESS_DENIED',
-
-  // Server Errors (SERVER_xxx)
-  SERVER_INTERNAL_ERROR: 'SERVER_INTERNAL_ERROR',
-  SERVER_DATABASE_ERROR: 'SERVER_DATABASE_ERROR',
+  // Network/Client Errors
   SERVER_NETWORK_ERROR: 'SERVER_NETWORK_ERROR',
   SERVER_TIMEOUT: 'SERVER_TIMEOUT',
-  SERVER_SERVICE_UNAVAILABLE: 'SERVER_SERVICE_UNAVAILABLE',
-
-  // Rate Limiting (RATE_xxx)
-  RATE_LIMIT_EXCEEDED: 'RATE_LIMIT_EXCEEDED',
-  RATE_LIMIT_IP_BLOCKED: 'RATE_LIMIT_IP_BLOCKED',
-
-  // Generic
   UNKNOWN_ERROR: 'UNKNOWN_ERROR'
 };
 
 // Error messages in Vietnamese (fallback if not provided by server)
 export const ERROR_MESSAGES = {
-  // Authentication Errors
-  [ERROR_CODES.AUTH_MISSING_CREDENTIALS]: 'Vui lòng nhập đầy đủ email và mật khẩu',
-  [ERROR_CODES.AUTH_INVALID_CREDENTIALS]: 'Email hoặc mật khẩu không chính xác',
-  [ERROR_CODES.AUTH_USER_NOT_FOUND]: 'Tài khoản không tồn tại',
-  [ERROR_CODES.AUTH_USER_INACTIVE]: 'Tài khoản đã bị vô hiệu hóa',
-  [ERROR_CODES.AUTH_ACCOUNT_LOCKED]: 'Tài khoản đã bị khóa tạm thời do nhập sai quá nhiều lần',
-  [ERROR_CODES.AUTH_TOO_MANY_ATTEMPTS]: 'Quá nhiều lần đăng nhập thất bại. Vui lòng thử lại sau',
-  [ERROR_CODES.AUTH_TOKEN_EXPIRED]: 'Phiên đăng nhập đã hết hạn',
-  [ERROR_CODES.AUTH_TOKEN_INVALID]: 'Phiên đăng nhập không hợp lệ',
-  [ERROR_CODES.AUTH_NOT_AUTHENTICATED]: 'Vui lòng đăng nhập để tiếp tục',
-  [ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS]: 'Bạn không có quyền thực hiện hành động này',
+  // 400 - Validation Errors
+  [ERROR_CODES.VALIDATION_ERROR]: 'Dữ liệu nhập vào không hợp lệ',
+  [ERROR_CODES.DUPLICATE_ENTRY]: 'Thông tin này đã tồn tại trong hệ thống',
+  [ERROR_CODES.REFERENCE_ERROR]: 'Tham chiếu không hợp lệ',
+  [ERROR_CODES.REQUIRED_FIELD_MISSING]: 'Vui lòng nhập đầy đủ thông tin bắt buộc',
+  [ERROR_CODES.INVALID_INPUT_FORMAT]: 'Định dạng dữ liệu không hợp lệ',
+  
+  // 401 - Authentication Errors
+  [ERROR_CODES.AUTHENTICATION_FAILED]: 'Xác thực thất bại',
+  [ERROR_CODES.INVALID_TOKEN]: 'Phiên đăng nhập không hợp lệ',
+  
+  // 403 - Authorization Errors
+  [ERROR_CODES.AUTHORIZATION_FAILED]: 'Bạn không có quyền thực hiện hành động này',
+  
+  // 404 - Not Found Errors
+  [ERROR_CODES.NOT_FOUND]: 'Không tìm thấy tài nguyên yêu cầu',
+  [ERROR_CODES.ROUTE_NOT_FOUND]: 'Đường dẫn không tồn tại',
+  
+  // 409 - Conflict Errors
+  [ERROR_CODES.CONFLICT_ERROR]: 'Xung đột dữ liệu',
+  
+  // 422 - Business Logic Errors
+  [ERROR_CODES.BUSINESS_LOGIC_ERROR]: 'Vi phạm quy tắc kinh doanh',
+  
+  // 429 - Rate Limiting
+  [ERROR_CODES.RATE_LIMITED]: 'Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau',
+  
+  // 500 - Server Errors
+  [ERROR_CODES.INTERNAL_SERVER_ERROR]: 'Lỗi máy chủ nội bộ. Vui lòng thử lại sau',
+  [ERROR_CODES.DATABASE_ERROR]: 'Lỗi cơ sở dữ liệu. Vui lòng thử lại sau',
+  
+  // 502 - External Service Errors
+  [ERROR_CODES.EXTERNAL_SERVICE_ERROR]: 'Lỗi dịch vụ bên ngoài. Vui lòng thử lại sau',
+  
+  // Special Cases
+  [ERROR_CODES.FILE_TOO_LARGE]: 'Tệp tin quá lớn',
+  [ERROR_CODES.INVALID_JSON]: 'Dữ liệu JSON không hợp lệ',
 
-  // Validation Errors
-  [ERROR_CODES.VALIDATION_REQUIRED_FIELD]: 'Trường này là bắt buộc',
-  [ERROR_CODES.VALIDATION_INVALID_EMAIL]: 'Email không hợp lệ',
-  [ERROR_CODES.VALIDATION_INVALID_PHONE]: 'Số điện thoại không hợp lệ',
-  [ERROR_CODES.VALIDATION_WEAK_PASSWORD]: 'Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường và số',
-  [ERROR_CODES.VALIDATION_PASSWORD_MISMATCH]: 'Mật khẩu xác nhận không khớp',
-  [ERROR_CODES.VALIDATION_INVALID_DATE]: 'Ngày sinh không hợp lệ',
-  [ERROR_CODES.VALIDATION_INVALID_ROLE]: 'Vai trò không hợp lệ',
-  [ERROR_CODES.VALIDATION_NAME_TOO_SHORT]: 'Họ và tên phải có ít nhất 2 ký tự',
-  [ERROR_CODES.VALIDATION_NAME_INVALID_CHARS]: 'Họ và tên chỉ được chứa chữ cái và khoảng trắng',
-  [ERROR_CODES.VALIDATION_AGE_RESTRICTION]: 'Bạn phải từ 18 tuổi trở lên',
-
-  // Resource Errors
-  [ERROR_CODES.RESOURCE_NOT_FOUND]: 'Không tìm thấy tài nguyên yêu cầu',
-  [ERROR_CODES.RESOURCE_ALREADY_EXISTS]: 'Tài nguyên đã tồn tại',
-  [ERROR_CODES.RESOURCE_EMAIL_EXISTS]: 'Email này đã được sử dụng',
-  [ERROR_CODES.RESOURCE_PHONE_EXISTS]: 'Số điện thoại này đã được sử dụng',
-  [ERROR_CODES.RESOURCE_ACCESS_DENIED]: 'Bạn không có quyền truy cập tài nguyên này',
-
-  // Server Errors
-  [ERROR_CODES.SERVER_INTERNAL_ERROR]: 'Lỗi máy chủ nội bộ. Vui lòng thử lại sau',
-  [ERROR_CODES.SERVER_DATABASE_ERROR]: 'Lỗi cơ sở dữ liệu. Vui lòng thử lại sau',
+  // Network/Client Errors
   [ERROR_CODES.SERVER_NETWORK_ERROR]: 'Lỗi kết nối mạng. Vui lòng kiểm tra kết nối và thử lại',
   [ERROR_CODES.SERVER_TIMEOUT]: 'Yêu cầu quá thời gian. Vui lòng thử lại',
-  [ERROR_CODES.SERVER_SERVICE_UNAVAILABLE]: 'Dịch vụ tạm thời không khả dụng. Vui lòng thử lại sau',
-
-  // Rate Limiting
-  [ERROR_CODES.RATE_LIMIT_EXCEEDED]: 'Bạn đã vượt quá giới hạn yêu cầu. Vui lòng thử lại sau',
-  [ERROR_CODES.RATE_LIMIT_IP_BLOCKED]: 'Địa chỉ IP của bạn đã bị chặn tạm thời',
-
-  // Generic
   [ERROR_CODES.UNKNOWN_ERROR]: 'Có lỗi không xác định xảy ra. Vui lòng thử lại'
 };
 

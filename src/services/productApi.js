@@ -4,7 +4,7 @@ import { useErrorHandler } from '../composables/useErrorHandler.js'
 const API_BASE_URL = 'http://localhost:3000/products'
 
 export function useProductApi() {
-  const { makeApiRequest, handleApiError } = useErrorHandler()
+  const { makeApiRequest } = useErrorHandler()
 
   // Get products list with filters and pagination
   const getProducts = async (params = {}) => {
@@ -91,11 +91,66 @@ export function useProductApi() {
     }
   }
 
+  // Upload product image
+  const uploadImage = async (productId, file) => {
+    try {
+      const formData = new FormData()
+      formData.append('image', file)
+      
+      const url = `${API_BASE_URL}/${productId}/images/upload`
+      const response = await makeApiRequest(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          // Don't set Content-Type for FormData, let browser set it
+        }
+      })
+      
+      return response
+    } catch (error) {
+      console.error('Upload image error:', error)
+      throw error
+    }
+  }
+
+  // Delete product image
+  const deleteImage = async (productId, imageIndex) => {
+    try {
+      const url = `${API_BASE_URL}/${productId}/images/${imageIndex}`
+      const response = await makeApiRequest(url, {
+        method: 'DELETE'
+      })
+      
+      return response
+    } catch (error) {
+      console.error('Delete image error:', error)
+      throw error
+    }
+  }
+
+  // Set main image
+  const setMainImage = async (productId, imageIndex) => {
+    try {
+      const url = `${API_BASE_URL}/${productId}/images/${imageIndex}/main`
+      const response = await makeApiRequest(url, {
+        method: 'PUT'
+      })
+      
+      return response
+    } catch (error) {
+      console.error('Set main image error:', error)
+      throw error
+    }
+  }
+
   return {
     getProducts,
     getProduct,
     createProduct,
     updateProduct,
-    deleteProduct
+    deleteProduct,
+    uploadImage,
+    deleteImage,
+    setMainImage
   }
 } 

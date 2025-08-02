@@ -694,6 +694,9 @@ function resetForm() {
 }
 
 async function saveStaff() {
+  // Prevent multiple submissions
+  if (saving.value) return
+  
   // Clear previous errors
   clearErrors()
   
@@ -730,8 +733,8 @@ async function saveStaff() {
       if (data.success) {
         // Show success message for update
         showToast('Cập nhật thông tin nhân viên thành công!', 'success')
-        closeModal()
         await fetchUsers()
+        closeModal() // Only close on success
       } else {
         throw new Error(data.error || 'Failed to update staff')
       }
@@ -763,6 +766,7 @@ async function saveStaff() {
         
         // Refresh the list
         await fetchUsers()
+        // Don't close the create modal here - the success modal will handle it
       } else {
         throw new Error(data.error || 'Failed to create staff')
       }
@@ -791,6 +795,7 @@ async function saveStaff() {
     } else {
       formError.value = `Có lỗi xảy ra khi ${isEditing.value ? 'cập nhật' : 'tạo'} tài khoản nhân viên. Vui lòng thử lại.`
     }
+    // Don't close modal on error - let user see the error and try again
   } finally {
     saving.value = false
   }

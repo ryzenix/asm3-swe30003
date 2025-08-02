@@ -1,6 +1,6 @@
 <template>
   <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+    <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative">
       <!-- Header -->
       <div class="flex items-center justify-between p-6 border-b border-gray-200">
         <div>
@@ -13,12 +13,25 @@
         </div>
         <button 
           @click="$emit('close')"
-          class="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+          :disabled="isSubmitting"
+          :class="[
+            'transition-colors duration-200',
+            isSubmitting ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-gray-600'
+          ]"
         >
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
+      </div>
+
+      <!-- Loading overlay -->
+      <div v-if="isSubmitting" class="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-xl flex items-center justify-center z-50">
+        <div class="flex flex-col items-center">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span class="text-sm text-gray-600 mt-2">Đang lưu sản phẩm...</span>
+          <p class="text-xs text-gray-500 mt-1">Vui lòng chờ trong giây lát</p>
+        </div>
       </div>
 
       <!-- Form -->
@@ -41,7 +54,11 @@
                 v-model="form.title"
                 type="text" 
                 required
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                :disabled="isSubmitting"
+                :class="[
+                  'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200',
+                  isSubmitting ? 'bg-gray-100 cursor-not-allowed' : ''
+                ]"
                 placeholder="Nhập tên sản phẩm"
               />
             </div>
@@ -53,9 +70,14 @@
               <input 
                 v-model="form.sku"
                 type="text" 
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                placeholder="Nhập mã sản phẩm (SKU)"
+w                :disabled="isSubmitting"
+                :class="[
+                  'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200',
+                  isSubmitting ? 'bg-gray-100 cursor-not-allowed' : ''
+                ]"
+                placeholder="Nhập mã sản phẩm (SKU) - Để trống để tự động tạo"
               />
+              <p class="text-xs text-gray-500 mt-1">Để trống để hệ thống tự động tạo mã sản phẩm</p>
             </div>
 
             <div>
@@ -66,7 +88,11 @@
                 v-model="form.category"
                 @change="handleCategoryChange"
                 required
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                :disabled="isSubmitting"
+                :class="[
+                  'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200',
+                  isSubmitting ? 'bg-gray-100 cursor-not-allowed' : ''
+                ]"
               >
                 <option value="">Chọn danh mục</option>
                 <option v-for="category in mainCategories" :key="category" :value="category">
@@ -98,7 +124,11 @@
                 v-model="form.manufacturer"
                 type="text" 
                 required
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                :disabled="isSubmitting"
+                :class="[
+                  'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200',
+                  isSubmitting ? 'bg-gray-100 cursor-not-allowed' : ''
+                ]"
                 placeholder="Nhập tên nhà sản xuất"
               />
             </div>
@@ -113,7 +143,11 @@
                 v-model="form.unit"
                 type="text" 
                 required
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                :disabled="isSubmitting"
+                :class="[
+                  'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200',
+                  isSubmitting ? 'bg-gray-100 cursor-not-allowed' : ''
+                ]"
                 placeholder="Ví dụ: Hộp 20 viên, Chai 100ml"
               />
             </div>
@@ -137,7 +171,11 @@
                   type="number" 
                   required
                   min="0"
-                  class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  :disabled="isSubmitting"
+                  :class="[
+                    'w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200',
+                    isSubmitting ? 'bg-gray-100 cursor-not-allowed' : ''
+                  ]"
                   placeholder="0"
                 />
                 <span class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">VNĐ</span>
@@ -542,12 +580,28 @@
           </div>
         </div>
 
+        <!-- Error Display -->
+        <div v-if="submitError" class="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div class="flex items-start">
+            <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+            <p class="text-sm text-red-600 font-medium">{{ submitError }}</p>
+          </div>
+        </div>
+
         <!-- Form Actions -->
         <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
           <button 
             type="button"
             @click="$emit('close')"
-            class="px-6 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all duration-200 font-medium"
+            :disabled="isSubmitting"
+            :class="[
+              'px-6 py-3 rounded-lg font-medium transition-all duration-200',
+              isSubmitting 
+                ? 'text-gray-400 bg-gray-200 cursor-not-allowed' 
+                : 'text-gray-700 bg-gray-100 hover:bg-gray-200'
+            ]"
           >
             Hủy bỏ
           </button>
@@ -581,6 +635,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'save'])
 
 const isSubmitting = ref(false)
+const submitError = ref('')
 
 // Image upload related reactive variables
 const dropZone = ref(null)
@@ -637,8 +692,8 @@ watch(() => props.product, (newProduct) => {
       image: newProduct.image || '',
       description: newProduct.description || '',
       uses: newProduct.uses || '',
-      ingredients: newProduct.ingredients || [''],
-      usageInstructions: newProduct.usageInstructions || [''],
+      ingredients: newProduct.ingredients && newProduct.ingredients.length > 0 ? [...newProduct.ingredients] : [''],
+      usageInstructions: newProduct.usageInstructions && newProduct.usageInstructions.length > 0 ? [...newProduct.usageInstructions] : [''],
       stockQuantity: newProduct.stockQuantity || 0,
       expiryDate: newProduct.expiryDate || '',
       requiresPrescription: newProduct.requiresPrescription || false,
@@ -646,7 +701,15 @@ watch(() => props.product, (newProduct) => {
     }
     
     // Initialize uploaded images if editing
-    if (newProduct.image) {
+    if (newProduct.images && newProduct.images.length > 0) {
+      uploadedImages.value = newProduct.images.map((url, index) => ({
+        name: `Product Image ${index + 1}`,
+        size: 0,
+        type: 'image/url',
+        url: url,
+        isMain: index === (newProduct.mainImageIndex || 0)
+      }))
+    } else if (newProduct.image) {
       uploadedImages.value = [{
         name: 'Product Image',
         size: 0,
@@ -682,6 +745,13 @@ watch(() => props.product, (newProduct) => {
   }
   imageUrl.value = ''
 }, { immediate: true })
+
+// Clear submit error when user starts typing
+watch(() => [form.value.title, form.value.category, form.value.manufacturer, form.value.unit, form.value.priceValue], () => {
+  if (submitError.value) {
+    submitError.value = ''
+  }
+})
 
 // Method để xử lý khi category thay đổi
 const handleCategoryChange = () => {
@@ -834,21 +904,29 @@ const removeInstruction = (index) => {
 }
 
 const handleSubmit = async () => {
+  // Prevent multiple submissions
   if (isSubmitting.value) return
+
+  // Clear any previous errors
+  submitError.value = ''
+
+  // Validate required fields
+  if (!form.value.title || !form.value.category || !form.value.manufacturer || 
+      !form.value.unit || !form.value.priceValue) {
+    submitError.value = 'Vui lòng điền đầy đủ thông tin bắt buộc'
+    return
+  }
+
+  // Validate price value
+  if (isNaN(form.value.priceValue) || parseInt(form.value.priceValue) <= 0) {
+    submitError.value = 'Giá sản phẩm phải là số dương'
+    return
+  }
 
   isSubmitting.value = true
 
   try {
-    // Validate required fields
-    if (!form.value.title || !form.value.category || !form.value.manufacturer || 
-        !form.value.unit || !form.value.priceValue) {
-      alert('Vui lòng điền đầy đủ thông tin bắt buộc')
-      return
-    }
-
-    // Format price for display
-    const formattedPrice = parseInt(form.value.priceValue).toLocaleString('vi-VN') + 'đ'
-
+    // Prepare product data matching backend expectations
     const productData = {
       title: form.value.title,
       sku: form.value.sku,
@@ -857,23 +935,40 @@ const handleSubmit = async () => {
       manufacturer: form.value.manufacturer,
       unit: form.value.unit,
       priceValue: parseInt(form.value.priceValue),
-      price: formattedPrice,
+      // Remove price field as backend calculates it from priceValue
       discount: parseInt(form.value.discount) || 0,
-      image: form.value.image || '/img/products/placeholder-product.jpg',
+      // Handle images properly - convert single image to array if needed
+      images: uploadedImages.value.length > 0 
+        ? uploadedImages.value.map(img => img.url)
+        : form.value.image ? [form.value.image] : [],
+      mainImageIndex: uploadedImages.value.findIndex(img => img.isMain) >= 0 
+        ? uploadedImages.value.findIndex(img => img.isMain) 
+        : 0,
       description: form.value.description,
       uses: form.value.uses,
       ingredients: form.value.ingredients.filter(item => item.trim() !== ''),
       usageInstructions: form.value.usageInstructions.filter(item => item.trim() !== ''),
       stockQuantity: parseInt(form.value.stockQuantity) || 0,
-      expiryDate: form.value.expiryDate,
+      expiryDate: form.value.expiryDate || null,
       requiresPrescription: form.value.requiresPrescription,
       status: form.value.status
     }
 
-    emit('save', productData)
+    // Emit the save event and wait for the parent to handle it
+    await emit('save', productData)
+    
+    // If we reach here, the save was successful (no error thrown)
+    // The parent will close the modal on success
+    
   } catch (error) {
     console.error('Error saving product:', error)
-    alert('Có lỗi xảy ra khi lưu sản phẩm')
+    
+    // Check if it's a validation error or API error
+    if (error.message) {
+      submitError.value = error.message
+    } else {
+      submitError.value = 'Có lỗi xảy ra khi lưu sản phẩm. Vui lòng thử lại.'
+    }
   } finally {
     isSubmitting.value = false
   }

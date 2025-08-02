@@ -4,6 +4,7 @@
       @open-login="showAuth = true" 
       :isLoggedIn="isLoggedIn" 
       :user="user"
+      :isLoading="isLoading"
       @logout="handleLogout"
     />
     <router-view />
@@ -30,7 +31,7 @@ const showAuth = ref(false)
 const router = useRouter()
 
 // Use the auth composable
-const { isLoggedIn, user, logout, forceLoginStateUpdate } = useAuth();
+const { isLoggedIn, user, isLoading, logout, forceLoginStateUpdate } = useAuth();
 
 
 

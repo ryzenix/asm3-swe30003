@@ -64,14 +64,29 @@
               </label>
               <select 
                 v-model="form.category"
+                @change="handleCategoryChange"
                 required
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               >
                 <option value="">Chọn danh mục</option>
-                <option value="Người trưởng thành">Người trưởng thành</option>
-                <option value="Trẻ em">Trẻ em</option>
-                <option value="Người cao tuổi">Người cao tuổi</option>
-                <option value="Khẩu trang y tế">Khẩu trang y tế</option>
+                <option v-for="category in mainCategories" :key="category" :value="category">
+                  {{ category }}
+                </option>
+              </select>
+            </div>
+
+            <div v-if="form.category && hasSubcategories(form.category)">
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Danh mục con
+              </label>
+              <select 
+                v-model="form.subcategory"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              >
+                <option value="">Chọn danh mục con (tùy chọn)</option>
+                <option v-for="subcategory in availableSubcategories" :key="subcategory" :value="subcategory">
+                  {{ subcategory }}
+                </option>
               </select>
             </div>
 
@@ -160,43 +175,176 @@
             Hình ảnh sản phẩm
           </h3>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                URL hình ảnh chính
-              </label>
-              <input 
-                v-model="form.image"
-                type="url" 
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                placeholder="https://example.com/image.jpg"
-              />
+          <!-- Drag & Drop Upload Area -->
+          <div 
+            ref="dropZone"
+            @drop.prevent="handleDrop"
+            @dragover.prevent="handleDragOver"
+            @dragleave.prevent="handleDragLeave"
+            @click="triggerFileInput"
+            :class="[
+              'border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 cursor-pointer',
+              isDragOver 
+                ? 'border-blue-500 bg-blue-50' 
+                : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+            ]"
+          >
+            <div class="space-y-4">
+              <div class="flex justify-center">
+                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                  <i class="fas fa-cloud-upload-alt text-2xl text-gray-400"></i>
+                </div>
+              </div>
+              
+              <div class="space-y-2">
+                <h4 class="text-lg font-semibold text-gray-900">
+                  {{ isDragOver ? 'Thả file để tải lên' : 'Tải lên hình ảnh sản phẩm' }}
+                </h4>
+                <p class="text-sm text-gray-600">
+                  Kéo thả file hình ảnh vào đây hoặc click để chọn file
+                </p>
+                <p class="text-xs text-gray-500">
+                  Hỗ trợ: JPG, PNG, WEBP (Tối đa 5MB)
+                </p>
+              </div>
+
+              <button 
+                type="button"
+                class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+              >
+                <i class="fas fa-folder-open mr-2"></i>
+                Chọn file
+              </button>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Tải lên hình ảnh
-              </label>
-              <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors duration-200">
-                <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                <p class="text-sm text-gray-600 mt-2">Kéo thả hoặc click để chọn file</p>
-                <input type="file" class="hidden" accept="image/*" @change="handleImageUpload" />
+
+            <!-- Hidden file input -->
+            <input 
+              ref="fileInput"
+              type="file" 
+              accept="image/*" 
+              multiple
+              @change="handleFileSelect"
+              class="hidden"
+            />
+          </div>
+
+          <!-- Uploaded Images Gallery -->
+          <div v-if="uploadedImages.length > 0" class="space-y-4">
+            <div class="flex items-center justify-between">
+              <h4 class="text-sm font-semibold text-gray-900">Hình ảnh đã tải lên</h4>
+              <button 
+                @click="clearAllImages"
+                type="button"
+                class="text-sm text-red-600 hover:text-red-800 transition-colors duration-200"
+              >
+                <i class="fas fa-trash mr-1"></i>
+                Xóa tất cả
+              </button>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              <div 
+                v-for="(image, index) in uploadedImages" 
+                :key="index"
+                class="relative group"
+              >
+                <div class="relative">
+                  <img 
+                    :src="image.url" 
+                    :alt="`Product image ${index + 1}`"
+                    class="w-full h-24 object-cover rounded-lg border-2 transition-all duration-200"
+                    :class="[
+                      image.isMain 
+                        ? 'border-blue-500 ring-2 ring-blue-200' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    ]"
+                    @click="setMainImage(index)"
+                  />
+                  
+                  <!-- Main Image Badge -->
+                  <div v-if="image.isMain" class="absolute top-1 left-1">
+                    <span class="bg-blue-500 text-white text-xs px-2 py-1 rounded-full font-medium">
+                      <i class="fas fa-star mr-1"></i>
+                      Chính
+                    </span>
+                  </div>
+
+                  <!-- Action Buttons -->
+                  <div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <button 
+                      @click="setMainImage(index)"
+                      type="button"
+                      class="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-blue-600 transition-colors duration-200"
+                      :title="image.isMain ? 'Đã là ảnh chính' : 'Đặt làm ảnh chính'"
+                      :disabled="image.isMain"
+                    >
+                      <i class="fas fa-star"></i>
+                    </button>
+                  </div>
+
+                  <!-- Delete Button -->
+                  <div class="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <button 
+                      @click="removeImage(index)"
+                      type="button"
+                      class="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 transition-colors duration-200"
+                      title="Xóa ảnh"
+                    >
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Image Info -->
+                <div class="mt-2 text-center">
+                  <p class="text-xs text-gray-600 truncate">{{ image.name }}</p>
+                  <p class="text-xs text-gray-500">{{ formatFileSize(image.size) }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Main Image Preview -->
+            <div v-if="mainImage" class="bg-gray-50 rounded-lg p-4">
+              <h5 class="text-sm font-semibold text-gray-900 mb-3">Ảnh chính sẽ hiển thị</h5>
+              <div class="flex items-center space-x-4">
+                <img 
+                  :src="mainImage.url" 
+                  :alt="mainImage.name"
+                  class="w-20 h-20 object-cover rounded-lg border border-gray-200"
+                />
+                <div class="flex-1">
+                  <p class="text-sm font-medium text-gray-900">{{ mainImage.name }}</p>
+                  <p class="text-xs text-gray-500">{{ formatFileSize(mainImage.size) }}</p>
+                  <p class="text-xs text-blue-600 mt-1">
+                    <i class="fas fa-check-circle mr-1"></i>
+                    Ảnh này sẽ được hiển thị làm ảnh chính của sản phẩm
+                  </p>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Image Preview -->
-          <div v-if="form.image" class="flex items-center gap-4">
-            <img 
-              :src="form.image" 
-              alt="Product preview" 
-              class="w-20 h-20 object-cover rounded-lg border border-gray-200"
-              @error="handleImageError"
-            />
-            <div>
-              <p class="text-sm font-medium text-gray-900">Xem trước hình ảnh</p>
-              <p class="text-xs text-gray-500">Hình ảnh sẽ được hiển thị trên trang sản phẩm</p>
+          <!-- URL Input (Alternative) -->
+          <div class="border-t border-gray-200 pt-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Hoặc nhập URL hình ảnh
+            </label>
+            <div class="flex gap-2">
+              <input 
+                v-model="imageUrl"
+                type="url" 
+                placeholder="https://example.com/image.jpg"
+                class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                @keyup.enter="addImageFromUrl"
+              />
+              <button 
+                @click="addImageFromUrl"
+                type="button"
+                class="px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200"
+                :disabled="!imageUrl"
+              >
+                <i class="fas fa-plus"></i>
+              </button>
             </div>
           </div>
         </div>
@@ -254,7 +402,6 @@
               >
                 <option value="active">Đang bán</option>
                 <option value="inactive">Tạm ngưng</option>
-                <option value="out_of_stock">Hết hàng</option>
               </select>
             </div>
             <div>
@@ -422,6 +569,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { mainCategories, getSubcategories, hasSubcategories } from '../../constants/categories.js'
 
 const props = defineProps({
   product: {
@@ -434,10 +582,18 @@ const emit = defineEmits(['close', 'save'])
 
 const isSubmitting = ref(false)
 
+// Image upload related reactive variables
+const dropZone = ref(null)
+const fileInput = ref(null)
+const isDragOver = ref(false)
+const uploadedImages = ref([])
+const imageUrl = ref('')
+
 const form = ref({
   title: '',
   sku: '',
   category: '',
+  subcategory: '',
   manufacturer: '',
   unit: '',
   priceValue: '',
@@ -453,7 +609,18 @@ const form = ref({
   status: 'active'
 })
 
+// Computed property để lấy subcategories dựa trên category đã chọn
+const availableSubcategories = computed(() => {
+  if (!form.value.category) return []
+  return getSubcategories(form.value.category)
+})
+
 const isEditing = computed(() => !!props.product)
+
+// Computed property for main image
+const mainImage = computed(() => {
+  return uploadedImages.value.find(img => img.isMain) || null
+})
 
 // Initialize form when editing
 watch(() => props.product, (newProduct) => {
@@ -462,6 +629,7 @@ watch(() => props.product, (newProduct) => {
       title: newProduct.title || '',
       sku: newProduct.sku || '',
       category: newProduct.category || '',
+      subcategory: newProduct.subcategory || '',
       manufacturer: newProduct.manufacturer || '',
       unit: newProduct.unit || '',
       priceValue: newProduct.priceValue || '',
@@ -476,12 +644,26 @@ watch(() => props.product, (newProduct) => {
       requiresPrescription: newProduct.requiresPrescription || false,
       status: newProduct.status || 'active'
     }
+    
+    // Initialize uploaded images if editing
+    if (newProduct.image) {
+      uploadedImages.value = [{
+        name: 'Product Image',
+        size: 0,
+        type: 'image/url',
+        url: newProduct.image,
+        isMain: true
+      }]
+    } else {
+      uploadedImages.value = []
+    }
   } else {
     // Reset form for new product
     form.value = {
       title: '',
       sku: '',
       category: '',
+      subcategory: '',
       manufacturer: '',
       unit: '',
       priceValue: '',
@@ -496,8 +678,16 @@ watch(() => props.product, (newProduct) => {
       requiresPrescription: false,
       status: 'active'
     }
+    uploadedImages.value = []
   }
+  imageUrl.value = ''
 }, { immediate: true })
+
+// Method để xử lý khi category thay đổi
+const handleCategoryChange = () => {
+  // Reset subcategory khi category thay đổi
+  form.value.subcategory = ''
+}
 
 const calculateDiscountedPrice = () => {
   if (!form.value.priceValue || !form.value.discount) return ''
@@ -505,17 +695,118 @@ const calculateDiscountedPrice = () => {
   return discountedPrice.toLocaleString('vi-VN') + 'đ'
 }
 
-const handleImageUpload = (event) => {
-  const file = event.target.files[0]
-  if (file) {
-    // In a real app, you would upload to a server and get the URL
-    // For now, we'll create a local URL
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      form.value.image = e.target.result
+// Drag and drop methods
+const handleDragOver = (event) => {
+  isDragOver.value = true
+}
+
+const handleDragLeave = (event) => {
+  isDragOver.value = false
+}
+
+const handleDrop = (event) => {
+  isDragOver.value = false
+  const files = Array.from(event.dataTransfer.files)
+  processFiles(files)
+}
+
+const triggerFileInput = () => {
+  fileInput.value.click()
+}
+
+const handleFileSelect = (event) => {
+  const files = Array.from(event.target.files)
+  processFiles(files)
+  // Reset input value to allow selecting the same file again
+  event.target.value = ''
+}
+
+const processFiles = (files) => {
+  files.forEach(file => {
+    if (file.type.startsWith('image/')) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        alert(`File ${file.name} quá lớn. Kích thước tối đa là 5MB.`)
+        return
+      }
+      
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const imageData = {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          url: e.target.result,
+          isMain: uploadedImages.value.length === 0 // First image becomes main
+        }
+        uploadedImages.value.push(imageData)
+        
+        // Update form.image with the main image URL
+        if (imageData.isMain) {
+          form.value.image = imageData.url
+        }
+      }
+      reader.readAsDataURL(file)
+    } else {
+      alert(`File ${file.name} không phải là hình ảnh.`)
     }
-    reader.readAsDataURL(file)
+  })
+}
+
+const setMainImage = (index) => {
+  // Remove main status from all images
+  uploadedImages.value.forEach(img => img.isMain = false)
+  
+  // Set the selected image as main
+  uploadedImages.value[index].isMain = true
+  
+  // Update form.image with the main image URL
+  form.value.image = uploadedImages.value[index].url
+}
+
+const removeImage = (index) => {
+  const removedImage = uploadedImages.value[index]
+  uploadedImages.value.splice(index, 1)
+  
+  // If the removed image was main, set the first remaining image as main
+  if (removedImage.isMain && uploadedImages.value.length > 0) {
+    uploadedImages.value[0].isMain = true
+    form.value.image = uploadedImages.value[0].url
+  } else if (uploadedImages.value.length === 0) {
+    form.value.image = ''
   }
+}
+
+const clearAllImages = () => {
+  uploadedImages.value = []
+  form.value.image = ''
+}
+
+const addImageFromUrl = () => {
+  if (!imageUrl.value.trim()) return
+  
+  const imageData = {
+    name: 'External Image',
+    size: 0,
+    type: 'image/url',
+    url: imageUrl.value.trim(),
+    isMain: uploadedImages.value.length === 0
+  }
+  
+  uploadedImages.value.push(imageData)
+  
+  if (imageData.isMain) {
+    form.value.image = imageData.url
+  }
+  
+  imageUrl.value = ''
+}
+
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
 const handleImageError = (event) => {
@@ -562,6 +853,7 @@ const handleSubmit = async () => {
       title: form.value.title,
       sku: form.value.sku,
       category: form.value.category,
+      subcategory: form.value.subcategory,
       manufacturer: form.value.manufacturer,
       unit: form.value.unit,
       priceValue: parseInt(form.value.priceValue),

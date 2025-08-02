@@ -325,7 +325,7 @@
       :show="showDeleteModal"
       :staff-to-delete="staffToDelete"
       @close="closeDeleteModal"
-      @confirm="deleteStaff"
+      @confirm="performDeleteStaff"
     />
 
     <!-- Lock Modal -->
@@ -346,6 +346,7 @@ import CreateEditModal from '../components/StaffManagement/CreateEditModal.vue'
 import SuccessModal from '../components/StaffManagement/SuccessModal.vue'
 import DeleteModal from '../components/StaffManagement/DeleteModal.vue'
 import LockModal from '../components/StaffManagement/LockModal.vue'
+import { useStaffApi } from '../services/staffApi.js'
 
 // ===== REACTIVE STATE =====
 const showModal = ref(false)
@@ -402,6 +403,9 @@ const formValidation = ref({
 
 // Debounce timer for search
 let searchTimeout = null
+
+// ===== API SERVICE =====
+const { getStaffList, createStaff, updateStaff, deleteStaff, toggleStaffStatus } = useStaffApi()
 
 // ===== VALIDATION FUNCTIONS =====
 function validateField(fieldName) {
@@ -565,36 +569,24 @@ async function fetchUsers() {
   error.value = ''
   
   try {
-    const params = new URLSearchParams({
-      page: pagination.value.page.toString(),
-      limit: pagination.value.limit.toString()
-    })
+    const params = {
+      page: pagination.value.page,
+      limit: pagination.value.limit
+    }
 
     if (filters.value.search.trim()) {
-      params.append('search', filters.value.search.trim())
+      params.search = filters.value.search.trim()
     }
     
     if (filters.value.role) {
-      params.append('role', filters.value.role)
+      params.role = filters.value.role
     }
     
     if (filters.value.status) {
-      params.append('is_active', filters.value.status)
+      params.isActive = filters.value.status
     }
 
-    const response = await fetch(`http://localhost:3000/management/users/list?${params}`, {
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
-
-    const data = await response.json()
+    const data = await getStaffList(params)
     
     if (data.success) {
       // Transform API data to match component format
@@ -726,46 +718,14 @@ async function saveStaff() {
   try {
     if (isEditing.value) {
       // Update existing staff user
-      const response = await fetch(`http://localhost:3000/management/users/modify/${editingStaff.value.id}`, {
-        method: 'PUT',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: form.value.email.trim(),
-          fullName: form.value.fullName.trim(),
-          phone: form.value.phone.trim(),
-          isActive: form.value.isActive
-        })
-      })
-
-      const data = await response.json()
-      
-      if (!response.ok) {
-        // Handle different types of errors from server
-        if (data.error) {
-          if (data.error.includes('Email is already taken by another user') || data.error.includes('email already exists')) {
-            formError.value = 'Email này đã được sử dụng cho tài khoản khác'
-            formValidation.value.email = { isValid: false, error: 'Email đã tồn tại trong hệ thống' }
-          } else if (data.error.includes('Invalid email address format')) {
-            formError.value = 'Định dạng email không hợp lệ'
-            formValidation.value.email = { isValid: false, error: 'Định dạng email không hợp lệ' }
-          } else if (data.error.includes('Invalid phone number format')) {
-            formError.value = 'Định dạng số điện thoại không hợp lệ'
-            formValidation.value.phone = { isValid: false, error: 'Định dạng số điện thoại không hợp lệ' }
-          } else if (data.error.includes('Staff user not found')) {
-            formError.value = 'Không tìm thấy thông tin nhân viên'
-          } else if (data.error.includes('At least one field must be provided')) {
-            formError.value = 'Vui lòng cập nhật ít nhất một thông tin'
-          } else {
-            formError.value = data.error
-          }
-        } else {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-        }
-        return
+      const staffData = {
+        email: form.value.email.trim(),
+        fullName: form.value.fullName.trim(),
+        phone: form.value.phone.trim(),
+        isActive: form.value.isActive
       }
+
+      const data = await updateStaff(editingStaff.value.id, staffData)
       
       if (data.success) {
         // Show success message for update
@@ -777,52 +737,14 @@ async function saveStaff() {
       }
     } else {
       // Create new staff user
-      const response = await fetch('http://localhost:3000/management/users/create-staff', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: form.value.email.trim(),
-          fullName: form.value.fullName.trim(),
-          phone: form.value.phone.trim(),
-          role: 'pharmacist'
-        })
-      })
-
-      const data = await response.json()
-      
-      if (!response.ok) {
-        // Handle different types of errors from server
-        if (data.error) {
-          if (data.error.includes('email already exists') || data.error.includes('An account with this email already exists')) {
-            formError.value = 'Email này đã được sử dụng cho tài khoản khác'
-            formValidation.value.email = { isValid: false, error: 'Email đã tồn tại trong hệ thống' }
-          } else if (data.error.includes('Invalid email address format')) {
-            formError.value = 'Định dạng email không hợp lệ'
-            formValidation.value.email = { isValid: false, error: 'Định dạng email không hợp lệ' }
-          } else if (data.error.includes('Invalid phone number format')) {
-            formError.value = 'Định dạng số điện thoại không hợp lệ'
-            formValidation.value.phone = { isValid: false, error: 'Định dạng số điện thoại không hợp lệ' }
-          } else if (data.missingFields && data.missingFields.length > 0) {
-            formError.value = 'Thiếu thông tin bắt buộc'
-            fieldErrors.value = data.missingFields.map(field => {
-              switch (field) {
-                case 'email': return 'Email là thông tin bắt buộc'
-                case 'fullName': return 'Họ và tên là thông tin bắt buộc'
-                case 'phone': return 'Số điện thoại là thông tin bắt buộc'
-                default: return `Thiếu thông tin: ${field}`
-              }
-            })
-          } else {
-            formError.value = data.error
-          }
-        } else {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-        }
-        return
+      const staffData = {
+        email: form.value.email.trim(),
+        fullName: form.value.fullName.trim(),
+        phone: form.value.phone.trim(),
+        role: 'pharmacist'
       }
+
+      const data = await createStaff(staffData)
       
       if (data.success) {
         // Store the created staff data for success modal
@@ -847,7 +769,28 @@ async function saveStaff() {
     }
   } catch (err) {
     console.error('Save staff error:', err)
-    formError.value = err.message || `Có lỗi xảy ra khi ${isEditing.value ? 'cập nhật' : 'tạo'} tài khoản nhân viên. Vui lòng thử lại.`
+    
+    // Handle specific error cases
+    if (err.message) {
+      if (err.message.includes('Email is already taken by another user') || err.message.includes('email already exists')) {
+        formError.value = 'Email này đã được sử dụng cho tài khoản khác'
+        formValidation.value.email = { isValid: false, error: 'Email đã tồn tại trong hệ thống' }
+      } else if (err.message.includes('Invalid email address format')) {
+        formError.value = 'Định dạng email không hợp lệ'
+        formValidation.value.email = { isValid: false, error: 'Định dạng email không hợp lệ' }
+      } else if (err.message.includes('Invalid phone number format')) {
+        formError.value = 'Định dạng số điện thoại không hợp lệ'
+        formValidation.value.phone = { isValid: false, error: 'Định dạng số điện thoại không hợp lệ' }
+      } else if (err.message.includes('Staff user not found')) {
+        formError.value = 'Không tìm thấy thông tin nhân viên'
+      } else if (err.message.includes('At least one field must be provided')) {
+        formError.value = 'Vui lòng cập nhật ít nhất một thông tin'
+      } else {
+        formError.value = err.message
+      }
+    } else {
+      formError.value = `Có lỗi xảy ra khi ${isEditing.value ? 'cập nhật' : 'tạo'} tài khoản nhân viên. Vui lòng thử lại.`
+    }
   } finally {
     saving.value = false
   }
@@ -862,33 +805,7 @@ async function confirmToggleStatus() {
   if (!staffToLock.value) return
   
   try {
-    const response = await fetch(`http://localhost:3000/management/users/modify/${staffToLock.value.id}`, {
-      method: 'PUT',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        isActive: !staffToLock.value.isActive
-      })
-    })
-
-    const data = await response.json()
-    
-    if (!response.ok) {
-      if (data.error) {
-        if (data.error.includes('Staff user not found')) {
-          showToast('Không tìm thấy thông tin nhân viên', 'error')
-        } else if (data.error.includes('At least one field must be provided')) {
-          showToast('Không có thay đổi nào để cập nhật', 'error')
-        } else {
-          showToast(data.error, 'error')
-        }
-      } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-      return
-    }
+    const data = await toggleStaffStatus(staffToLock.value.id, !staffToLock.value.isActive)
     
     if (data.success) {
       // Show success message
@@ -904,7 +821,19 @@ async function confirmToggleStatus() {
     }
   } catch (error) {
     console.error('Toggle status error:', error)
-    showToast('Có lỗi xảy ra khi thay đổi trạng thái tài khoản', 'error')
+    
+    // Handle specific error cases
+    if (error.message) {
+      if (error.message.includes('Staff user not found')) {
+        showToast('Không tìm thấy thông tin nhân viên', 'error')
+      } else if (error.message.includes('At least one field must be provided')) {
+        showToast('Không có thay đổi nào để cập nhật', 'error')
+      } else {
+        showToast(error.message, 'error')
+      }
+    } else {
+      showToast('Có lỗi xảy ra khi thay đổi trạng thái tài khoản', 'error')
+    }
   } finally {
     closeLockModal()
   }
@@ -931,36 +860,11 @@ function closeSuccessModal() {
   closeModal() // Close the create modal as well
 }
 
-async function deleteStaff() {
+async function performDeleteStaff() {
   if (!staffToDelete.value) return
   
   try {
-    let response = await fetch(`http://localhost:3000/management/users/delete/${staffToDelete.value.id}`, {
-      method: 'DELETE',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-
-    const data = await response.json()
-    
-    if (!response.ok) {
-      if (data.error) {
-        if (data.error.includes('User not found')) {
-          showToast('Không tìm thấy thông tin nhân viên', 'error')
-        } else if (data.error.includes('Missing parameter')) {
-          showToast('Không có thay đổi nào để cập nhật', 'error')
-        } else if (data.error.includes('Cannot delete')) {
-          showToast('Không thể xóa nhân viên này', 'error')
-        } else {
-          showToast(data.error, 'error')
-        }
-      } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-      return
-    }
+    const data = await deleteStaff(staffToDelete.value.id)
     
     if (data.success) {
       // Show success message
@@ -976,7 +880,21 @@ async function deleteStaff() {
     }
   } catch (error) {
     console.error('Delete user error:', error)
-    showToast('Có lỗi xảy ra khi xóa nhân viên', 'error')
+    
+    // Handle specific error cases
+    if (error.message) {
+      if (error.message.includes('User not found')) {
+        showToast('Không tìm thấy thông tin nhân viên', 'error')
+      } else if (error.message.includes('Missing parameter')) {
+        showToast('Không có thay đổi nào để cập nhật', 'error')
+      } else if (error.message.includes('Cannot delete')) {
+        showToast('Không thể xóa nhân viên này', 'error')
+      } else {
+        showToast(error.message, 'error')
+      }
+    } else {
+      showToast('Có lỗi xảy ra khi xóa nhân viên', 'error')
+    }
   } finally {
     closeDeleteModal()
   }

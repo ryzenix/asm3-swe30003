@@ -93,8 +93,30 @@
           </div>
         </div>
 
+        <!-- Loading State -->
+        <div v-if="loading" class="text-center py-12">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p class="text-gray-600">Đang tải danh sách sản phẩm...</p>
+        </div>
+
+        <!-- Error State -->
+        <div v-else-if="error" class="text-center py-12">
+          <div class="text-red-500 mb-4">
+            <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <p class="text-gray-600 mb-4">{{ error }}</p>
+          <button 
+            @click="fetchProducts"
+            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Thử lại
+          </button>
+        </div>
+
         <!-- Product Grid -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-6">
+        <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-6">
           <ProductCard
             v-for="(product, index) in paginatedProducts"
             :key="`${product.title}-${index}`"
@@ -124,16 +146,18 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive, watch } from 'vue'
+import { ref, computed, reactive, watch, onMounted } from 'vue'
 import ProductCard from '../components/ProductList/ProductCard.vue'
 import FilterSection from '../components/ProductList/FilterSection.vue'
 import PaginationControls from '../components/ProductList/PaginationControls.vue'
+import { mainCategories, getSubcategories } from '../constants/categories.js'
+import { useProductApi } from '../services/productApi.js'
 
 // Filter configuration
 const filters = [
   {
-    label: "Đối tượng sử dụng",
-    options: ["Tất cả", "Trẻ em", "Người trưởng thành", "Người lớn", "Người cao tuổi"],
+    label: "Danh mục",
+    options: ["Tất cả", ...mainCategories],
   },
   {
     label: "Giá bán",
@@ -145,150 +169,23 @@ const filters = [
   },
 ]
 
-// Sample products data
-const allProducts = [
-  {
-    id: 1,
-    title: "Siro Bổ Phế Labebe 120ml hỗ trợ bổ phế, giảm ho, giảm đờm",
-    price: "75.000đ",
-    priceValue: 75000,
-    unit: "Hộp",
-    image: "/products/siro-labebe.webp",
-    category: "Trẻ em",
-    manufacturer: "Pharmacity",
-    stockQuantity: 150,
-    status: "available",
-    sku: "SIRO001",
-    expiryDate: "2024-12-31",
-    requiresPrescription: false
-  },
-  {
-    id: 2,
-    title: "Viên uống Immuvita Easylife bổ sung vitamin và khoáng chất",
-    price: "390.000đ",
-    priceValue: 390000,
-    unit: "Hộp 100 Viên",
-    image: "/products/immuvita.webp",
-    category: "Người trưởng thành",
-    manufacturer: "Mega We Care",
-    stockQuantity: 200,
-    status: "available",
-    sku: "IMMU002",
-    expiryDate: "2025-06-30",
-    requiresPrescription: false
-  },
-  {
-    id: 3,
-    title: "Siro Canxi-D3-K2 5ml Kingphar bổ sung canxi",
-    price: "105.000đ",
-    priceValue: 105000,
-    unit: "Hộp 6 ống",
-    image: "/products/canxi-d3.webp",
-    category: "Trẻ em",
-    manufacturer: "Dược Hậu Giang",
-    stockQuantity: 25,
-    status: "low_stock",
-    sku: "CANX003",
-    expiryDate: "2024-10-15",
-    requiresPrescription: false
-  },
-  {
-    id: 4,
-    title: "Viên uống Cordyceps 1500mg hỗ trợ tăng sức đề kháng",
-    price: "595.000đ",
-    priceValue: 595000,
-    unit: "Hộp 60 viên",
-    image: "/products/cordyceps.webp",
-    category: "Người lớn",
-    manufacturer: "Traphaco",
-    stockQuantity: 0,
-    status: "out_of_stock",
-    sku: "CORD004",
-    expiryDate: "2024-08-20",
-    requiresPrescription: false
-  },
-  {
-    id: 5,
-    title: "Thực phẩm chức năng Omega 3 Plus",
-    price: "920.000đ",
-    priceValue: 920000,
-    unit: "Hộp 120 Viên",
-    image: "/products/omega3.webp",
-    discount: 10,
-    category: "Người cao tuổi",
-    manufacturer: "Mega We Care",
-    stockQuantity: 80,
-    status: "available",
-    sku: "OMEG005",
-    expiryDate: "2025-03-15",
-    requiresPrescription: false
-  },
-  {
-    id: 6,
-    title: "Vitamin C 1000mg tăng cường miễn dịch",
-    price: "250.000đ",
-    priceValue: 250000,
-    unit: "Hộp 60 viên",
-    image: "/products/vitamin-c.webp",
-    category: "Người trưởng thành",
-    manufacturer: "Pharmacity",
-    stockQuantity: 300,
-    status: "available",
-    sku: "VITC006",
-    expiryDate: "2025-01-20",
-    requiresPrescription: false
-  },
-  {
-    id: 7,
-    title: "Probiotics hỗ trợ tiêu hóa cho trẻ em",
-    price: "180.000đ",
-    priceValue: 180000,
-    unit: "Hộp 30 gói",
-    image: "/products/probiotics.webp",
-    category: "Trẻ em",
-    manufacturer: "Dược Hậu Giang",
-    discount: 15,
-    stockQuantity: 45,
-    status: "low_stock",
-    sku: "PROB007",
-    expiryDate: "2024-11-30",
-    requiresPrescription: false
-  },
-  {
-    id: 8,
-    title: "Glucosamine 1500mg bảo vệ khớp",
-    price: "450.000đ",
-    priceValue: 450000,
-    unit: "Hộp 90 viên",
-    image: "/products/glucosamine.webp",
-    category: "Người cao tuổi",
-    manufacturer: "Traphaco",
-    stockQuantity: 120,
-    status: "available",
-    sku: "GLUC008",
-    expiryDate: "2025-05-10",
-    requiresPrescription: false
-  },
-  {
-    id: 9,
-    title: "Siro ho cho trẻ em Natural Honey",
-    price: "85.000đ",
-    priceValue: 85000,
-    unit: "Chai 100ml",
-    image: "/products/siro-ho.webp",
-    category: "Trẻ em",
-    manufacturer: "Pharmacity",
-    stockQuantity: 0,
-    status: "out_of_stock",
-    sku: "SIRO009",
-    expiryDate: "2024-09-05",
-    requiresPrescription: false
-  }
-]
+// API service
+const { getProducts } = useProductApi()
+
+// Products data from API
+const allProducts = ref([])
+const loading = ref(false)
+const error = ref('')
+
+// API data for pagination and filters
+const apiData = ref({
+  pagination: null,
+  filters: {}
+})
 
 // Reactive state
 const activeFilters = reactive({
-  "Đối tượng sử dụng": [],
+  "Danh mục": [],
   "Giá bán": [],
   "Nhà sản xuất": []
 })
@@ -297,18 +194,68 @@ const sortBy = ref('bestseller')
 const currentPage = ref(1)
 const itemsPerPage = ref(8)
 
+// API Functions
+const fetchProducts = async () => {
+  loading.value = true
+  error.value = ''
+  
+  try {
+    const params = {
+      page: currentPage.value,
+      limit: itemsPerPage.value,
+      status: 'active' // Only show active products for customers
+    }
+    
+    // Add search if any filter is active
+    const searchTerms = []
+    Object.keys(activeFilters).forEach(filterType => {
+      const selectedOptions = activeFilters[filterType]
+      if (selectedOptions.length > 0) {
+        selectedOptions.forEach(option => {
+          if (option !== "Tất cả") {
+            searchTerms.push(option)
+          }
+        })
+      }
+    })
+    
+    if (searchTerms.length > 0) {
+      params.search = searchTerms.join(' ')
+    }
+    
+    const response = await getProducts(params)
+    
+    if (response.success) {
+      allProducts.value = response.data.products
+      apiData.value = {
+        pagination: response.data.pagination,
+        filters: response.data.filters
+      }
+    } else {
+      throw new Error(response.error || 'Failed to fetch products')
+    }
+  } catch (err) {
+    console.error('Fetch products error:', err)
+    error.value = err.message || 'Có lỗi xảy ra khi tải danh sách sản phẩm'
+    allProducts.value = []
+    apiData.value = { pagination: null, filters: {} }
+  } finally {
+    loading.value = false
+  }
+}
+
 // Computed properties
 const filteredProducts = computed(() => {
-  let products = [...allProducts]
+  let products = [...allProducts.value]
 
-  // Apply filters
+  // Apply client-side filtering for price ranges and additional filters
   Object.keys(activeFilters).forEach(filterType => {
     const selectedOptions = activeFilters[filterType]
     if (selectedOptions.length > 0) {
       products = products.filter(product => {
         return selectedOptions.some(option => {
           switch (filterType) {
-            case "Đối tượng sử dụng":
+            case "Danh mục":
               return option === "Tất cả" || product.category === option
             case "Giá bán":
               return checkPriceRange(product.priceValue, option)
@@ -340,7 +287,7 @@ const filteredProducts = computed(() => {
 })
 
 const totalPages = computed(() => {
-  return Math.ceil(filteredProducts.value.length / itemsPerPage.value)
+  return apiData.value.pagination?.totalPages || Math.ceil(filteredProducts.value.length / itemsPerPage.value)
 })
 
 const startIndex = computed(() => {
@@ -360,7 +307,6 @@ const getStatusText = (status) => {
   switch (status) {
     case 'available': return 'Có sẵn'
     case 'low_stock': return 'Sắp hết hàng'
-    case 'out_of_stock': return 'Hết hàng'
     default: return 'Không xác định'
   }
 }
@@ -388,18 +334,21 @@ const setSortBy = (sort) => {
 const goToPage = (page) => {
   if (page >= 1 && page <= totalPages.value) {
     currentPage.value = page
+    fetchProducts()
   }
 }
 
 const applyFilters = () => {
-  goToPage(1)
+  currentPage.value = 1
+  fetchProducts()
 }
 
 const clearAllFilters = () => {
   Object.keys(activeFilters).forEach(key => {
     activeFilters[key] = []
   })
-  goToPage(1)
+  currentPage.value = 1
+  fetchProducts()
 }
 
 const handleAddToCart = (product) => {
@@ -413,6 +362,11 @@ watch([filteredProducts], () => {
   if (currentPage.value > totalPages.value && totalPages.value > 0) {
     currentPage.value = totalPages.value
   }
+})
+
+// Initialize on mount
+onMounted(() => {
+  fetchProducts()
 })
 </script>
 

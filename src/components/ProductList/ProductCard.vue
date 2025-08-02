@@ -6,6 +6,10 @@
         <div v-if="product.discount" class="absolute -top-2 -left-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs px-3 py-1 rounded-full z-20 shadow-md animate-bounce-slow">
             <i class="fas fa-bolt mr-1"></i> -{{ product.discount }}%
         </div>
+        <!-- Out of Stock Badge -->
+        <div v-if="product.stockQuantity === 0" class="absolute -top-2 -left-2 bg-gradient-to-r from-red-600 to-red-700 text-white text-xs px-3 py-1 rounded-full z-20 shadow-md">
+            <i class="fas fa-exclamation-triangle mr-1"></i> Hết hàng
+        </div>
         <!-- Wishlist Button -->
         <button class="absolute top-2 right-2 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-red-50 hover:text-red-500 transform hover:scale-110" @click.stop="toggleWishlist">
               <i :class="[
@@ -68,10 +72,20 @@
             <!-- Action Buttons -->
             <div class="space-y-2 relative z-10">
                 <!-- Add to Cart Button -->
-                <button @click="handleAddToCart" :disabled="isAddingToCart" class="w-full bg-blue-600 text-white text-sm py-3 rounded-lg hover:bg-blue-700 transition-all duration-200 font-semibold transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
+                <button 
+                  @click="handleAddToCart" 
+                  :disabled="isAddingToCart || product.stockQuantity === 0" 
+                  :class="[
+                    'w-full text-sm py-3 rounded-lg transition-all duration-200 font-semibold transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center',
+                    product.stockQuantity === 0 
+                      ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  ]"
+                >
                   <i v-if="isAddingToCart" class="fas fa-spinner fa-spin mr-2"></i>
+                  <i v-else-if="product.stockQuantity === 0" class="fas fa-times mr-2"></i>
                   <i v-else class="fas fa-cart-plus mr-2"></i>
-                  {{ isAddingToCart ? 'Đang thêm...' : 'Chọn mua' }}
+                  {{ isAddingToCart ? 'Đang thêm...' : (product.stockQuantity === 0 ? 'Hết hàng' : 'Chọn mua') }}
                 </button>
                 <!-- Secondary Actions -->
                 <div class="flex gap-2">

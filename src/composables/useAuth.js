@@ -9,6 +9,7 @@ import {
 export function useAuth() {
     // Reactive state
     const isLoggedIn = ref(false)
+    const isLoading = ref(false) // Add loading state for session check
     const user = ref({
         id: '',
         email: '',
@@ -21,6 +22,7 @@ export function useAuth() {
 
     // Check authentication status by querying the server
     const checkSession = async () => {
+        isLoading.value = true // Set loading to true when starting session check
         try {
             const response = await fetch('http://localhost:3000/auth/session', {
                 method: 'GET',
@@ -70,6 +72,8 @@ export function useAuth() {
             }
             await nextTick()
             return false
+        } finally {
+            isLoading.value = false // Set loading to false when session check completes
         }
     }
 
@@ -119,6 +123,7 @@ export function useAuth() {
 
     return {
         isLoggedIn,
+        isLoading, // Export loading state
         user,
         checkSession,
         forceLoginStateUpdate,

@@ -1,8 +1,30 @@
 <template>
 <div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
     <div class="max-w-6xl mx-auto px-4 py-6">
-        <!-- Top Section -->
-        <div class="flex flex-col lg:flex-row gap-6">
+        <!-- Loading State -->
+        <div v-if="loading" class="text-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p class="text-gray-600">Đang tải thông tin sản phẩm...</p>
+        </div>
+
+        <!-- Error State -->
+        <div v-else-if="error" class="text-center py-12">
+            <div class="text-red-500 mb-4">
+                <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+            </div>
+            <p class="text-gray-600 mb-4">{{ error }}</p>
+            <button 
+                @click="fetchProduct($route.params.id)"
+                class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+                Thử lại
+            </button>
+        </div>
+
+        <!-- Product Content -->
+        <div v-else class="flex flex-col lg:flex-row gap-6">
             <!-- Left: Images -->
             <div class="lg:w-1/2">
                 <div class="relative group">
@@ -94,8 +116,11 @@
                         <span class="text-sm font-bold text-yellow-600">4.8</span>
                         <span class="text-xs text-gray-500">(1,247 đánh giá)</span>
                     </div>
-                    <div class="px-3 py-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full text-xs font-medium shadow-sm">
+                    <div v-if="product.stockQuantity > 0" class="px-3 py-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full text-xs font-medium shadow-sm">
                         ✅ Còn hàng
+                    </div>
+                    <div v-else class="px-3 py-1 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-full text-xs font-medium shadow-sm">
+                        ⚠️ Hết hàng
                     </div>
                 </div>
 
@@ -124,7 +149,12 @@
                     <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                         <div class="space-y-1">
                             <dt class="font-medium text-gray-600">Danh mục:</dt>
-                            <dd class="text-gray-900 font-semibold">{{ product.category }}</dd>
+                            <dd class="text-gray-900 font-semibold">
+                              {{ product.category }}
+                              <span v-if="product.subcategory" class="text-gray-600 text-sm block">
+                                {{ product.subcategory }}
+                              </span>
+                            </dd>
                         </div>
                         <div class="space-y-1">
                             <dt class="font-medium text-gray-600">Quy cách:</dt>
@@ -161,11 +191,22 @@
 
                 <!-- CTA Buttons -->
                 <div class="flex flex-col sm:flex-row gap-3 mb-6">
-                    <button class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-semibold py-3 px-6 rounded-lg hover:from-blue-700 hover:to-indigo-800 transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button 
+                      :disabled="product.stockQuantity === 0"
+                      :class="[
+                        'flex-1 font-semibold py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transform hover:-translate-y-0.5',
+                        product.stockQuantity === 0 
+                          ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
+                          : 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white hover:from-blue-700 hover:to-indigo-800'
+                      ]"
+                    >
+                        <svg v-if="product.stockQuantity === 0" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 2.5M7 13v6a2 2 0 002 2h6a2 2 0 002-2v-6" />
                         </svg>
-                        Chọn mua
+                        {{ product.stockQuantity === 0 ? 'Hết hàng' : 'Chọn mua' }}
                     </button>
                     <button class="flex-1 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 font-semibold py-3 px-6 rounded-lg hover:from-gray-200 hover:to-gray-300 transition-all duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md transform hover:-translate-y-0.5">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -251,8 +292,10 @@
 
 <script>
 import {
-    ref
+    ref,
+    onMounted
 } from 'vue'
+import { useProductApi } from '../services/productApi.js'
 
 export default {
     name: 'ProductDetail',
@@ -260,8 +303,13 @@ export default {
         const quantity = ref(1)
         const activeTab = ref('Mô tả')
         const isWishlisted = ref(false)
+        const loading = ref(false)
+        const error = ref('')
 
         const tabs = ['Mô tả', 'Thành phần', 'Công dụng', 'Hướng dẫn sử dụng']
+
+        // API service
+        const { getProduct } = useProductApi()
 
         const product = ref({
             brand: 'Pharmacy',
@@ -270,11 +318,13 @@ export default {
             price: '59.000đ',
             originalPrice: null,
             unit: 'Hộp',
-            category: 'Khẩu trang y tế',
+            category: 'Dụng cụ y tế',
+            subcategory: 'Khẩu trang y tế',
             packaging: 'Hộp 50 Cái',
             origin: 'Việt Nam',
             manufacturer: 'CÔNG TY TNHH SẢN XUẤT - THƯƠNG MẠI THIẾT BỊ NAM ANH',
             promotion: 'Mua 1 Tặng 1 (01–31/8)',
+            stockQuantity: 150,
             mainImage: '/img/products/details/image1.webp',
             thumbnails: [
                 '/img/products/details/image1.webp',
@@ -292,6 +342,52 @@ export default {
                 'Điều chỉnh khẩu trang che kín mũi và miệng.'
             ]
         })
+
+        // Fetch product data from API
+        const fetchProduct = async (productId) => {
+            loading.value = true
+            error.value = ''
+            
+            try {
+                const response = await getProduct(productId)
+                
+                if (response.success) {
+                    const apiProduct = response.data
+                    
+                    // Transform API data to match component structure
+                    product.value = {
+                        brand: apiProduct.manufacturer,
+                        name: apiProduct.title,
+                        sku: apiProduct.sku,
+                        price: apiProduct.price,
+                        originalPrice: null, // API doesn't provide this
+                        unit: apiProduct.unit,
+                        category: apiProduct.category,
+                        subcategory: apiProduct.subcategory,
+                        packaging: apiProduct.unit,
+                        origin: 'Việt Nam', // Default value
+                        manufacturer: apiProduct.manufacturer,
+                        promotion: null, // API doesn't provide this
+                        stockQuantity: apiProduct.stockQuantity,
+                        mainImage: apiProduct.image || '/img/products/placeholder-product.jpg',
+                        thumbnails: [
+                            apiProduct.image || '/img/products/placeholder-product.jpg'
+                        ],
+                        description: apiProduct.description || '',
+                        ingredients: apiProduct.ingredients || [],
+                        uses: apiProduct.uses || '',
+                        usageInstructions: apiProduct.usageInstructions || []
+                    }
+                } else {
+                    throw new Error(response.error || 'Failed to fetch product')
+                }
+            } catch (err) {
+                console.error('Fetch product error:', err)
+                error.value = err.message || 'Có lỗi xảy ra khi tải thông tin sản phẩm'
+            } finally {
+                loading.value = false
+            }
+        }
 
         const increase = () => {
             quantity.value++
@@ -311,9 +407,20 @@ export default {
             isWishlisted,
             tabs,
             product,
+            loading,
+            error,
+            fetchProduct,
             increase,
             decrease,
             toggleWishlist
+        }
+    },
+
+    async mounted() {
+        // Get product ID from route params
+        const productId = this.$route.params.id
+        if (productId) {
+            await this.fetchProduct(productId)
         }
     }
 }

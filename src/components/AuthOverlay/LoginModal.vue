@@ -32,7 +32,8 @@
     <div v-if="isLoading" class="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-xl flex items-center justify-center z-10">
       <div class="flex flex-col items-center">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-        <p class="text-sm text-gray-600 mt-2">Đang đăng nhập...</p>
+        <p class="text-sm text-gray-600 mt-2">Đang xử lý...</p>
+        <p class="text-xs text-gray-500 mt-1">Vui lòng chờ trong giây lát</p>
       </div>
     </div>
 
@@ -46,8 +47,10 @@
           v-model="loginForm.email"
           type="email"
           placeholder="example@email.com"
+          :disabled="isLoading"
           :class="[
             'w-full border rounded-lg px-4 py-3 focus:outline-none transition-all',
+            isLoading ? 'bg-gray-100 cursor-not-allowed' : '',
             errors.email 
               ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-transparent' 
               : 'border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent'
@@ -74,8 +77,10 @@
             v-model="loginForm.password"
             :type="showPassword ? 'text' : 'password'"
             placeholder="Nhập mật khẩu của bạn"
+            :disabled="isLoading"
             :class="[
               'w-full border rounded-lg px-4 py-3 pr-12 focus:outline-none transition-all',
+              isLoading ? 'bg-gray-100 cursor-not-allowed' : '',
               errors.password 
                 ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-transparent' 
                 : 'border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent'
@@ -87,7 +92,11 @@
           <button
             type="button"
             @click="showPassword = !showPassword"
-            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+            :disabled="isLoading"
+            :class="[
+              'absolute right-3 top-1/2 transform -translate-y-1/2 transition-colors',
+              isLoading ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700'
+            ]"
             tabindex="-1"
           >
             <svg v-if="!showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -113,7 +122,11 @@
           <input 
             v-model="loginForm.rememberMe"
             type="checkbox" 
-            class="mr-2 text-green-600 focus:ring-green-500 rounded"
+            :disabled="isLoading"
+            :class="[
+              'mr-2 text-green-600 focus:ring-green-500 rounded',
+              isLoading ? 'cursor-not-allowed opacity-50' : ''
+            ]"
           >
           <span class="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">Ghi nhớ đăng nhập</span>
         </label>
@@ -121,7 +134,11 @@
         <button
           type="button"
           @click="handleForgotPassword"
-          class="text-sm text-green-600 hover:text-green-700 hover:underline font-medium transition-colors"
+          :disabled="isLoading"
+          :class="[
+            'text-sm font-medium transition-colors',
+            isLoading ? 'text-gray-400 cursor-not-allowed' : 'text-green-600 hover:text-green-700 hover:underline'
+          ]"
         >
           Quên mật khẩu?
         </button>
@@ -173,10 +190,10 @@
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          Đang đăng nhập...
+          Đang xử lý...
         </span>
         <span v-else-if="isBlocked">
-          Đăng nhập tạm khóa ({{ formatTime(blockTimeRemaining) }})
+          Đăng nhập tạm khóa ({{ debugBlockTime }})
         </span>
         <span v-else>Đăng nhập</span>
       </button>
@@ -195,10 +212,15 @@
     <!-- Manager login button -->
     <button
       @click="$emit('manager-login')"
-      class="w-full flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-3 mb-4 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-all group"
       :disabled="isLoading"
+      :class="[
+        'w-full flex items-center justify-center gap-2 border rounded-lg py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-all group',
+        isLoading 
+          ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed' 
+          : 'border-gray-300 hover:bg-gray-50 text-gray-600'
+      ]"
     >
-      <svg class="w-5 h-5 text-gray-600 group-hover:text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg v-if="!isLoading" class="w-5 h-5 text-gray-600 group-hover:text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           stroke-linecap="round"
           stroke-linejoin="round"
@@ -206,7 +228,13 @@
           d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
         />
       </svg>
-      <span class="group-hover:text-gray-800 transition-colors">Đăng nhập với tài khoản quản lý</span>
+      <svg v-else class="animate-spin w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <span class="group-hover:text-gray-800 transition-colors">
+        {{ isLoading ? 'Đang xử lý...' : 'Đăng nhập với tài khoản quản lý' }}
+      </span>
     </button>
 
     <!-- Register redirect -->
@@ -214,10 +242,16 @@
       Chưa có tài khoản?
       <button
         type="button"
-        class="text-green-600 hover:text-green-700 hover:underline font-medium ml-1 transition-colors"
+        :disabled="isLoading"
+        :class="[
+          'font-medium ml-1 transition-colors',
+          isLoading 
+            ? 'text-gray-400 cursor-not-allowed' 
+            : 'text-green-600 hover:text-green-700 hover:underline'
+        ]"
         @click="$emit('switch')"
       >
-        Đăng ký ngay
+        {{ isLoading ? 'Đang xử lý...' : 'Đăng ký ngay' }}
       </button>
     </p>
   </div>
@@ -288,6 +322,12 @@ const isFormValid = computed(() => {
 
 const showAttemptsWarning = computed(() => remainingAttempts.value <= 2 && remainingAttempts.value > 0)
 
+// Debug computed for block time
+const debugBlockTime = computed(() => {
+  console.log('Debug - isBlocked:', isBlocked.value, 'blockTimeRemaining:', blockTimeRemaining.value)
+  return formatTime(blockTimeRemaining.value)
+})
+
 // Error handling utilities
 const getErrorMessage = (errorCode, fallbackMessage = '') => {
   console.log(ERROR_MESSAGES[errorCode])
@@ -346,13 +386,27 @@ const formatTime = (seconds) => {
 }
 
 const startBlockTimer = (duration = 300) => {
+  // Clear any existing timer first
+  if (blockTimer) {
+    clearInterval(blockTimer)
+    blockTimer = null
+  }
+  
   isBlocked.value = true
   blockTimeRemaining.value = duration
   
+  console.log('Starting block timer with duration:', duration, 'seconds')
+  
   blockTimer = setInterval(() => {
-    blockTimeRemaining.value--
+    if (blockTimeRemaining.value > 0) {
+      blockTimeRemaining.value--
+      console.log('Block time remaining:', blockTimeRemaining.value, 'seconds')
+    }
+    
     if (blockTimeRemaining.value <= 0) {
+      console.log('Block timer finished, clearing interval')
       clearInterval(blockTimer)
+      blockTimer = null
       isBlocked.value = false
       remainingAttempts.value = 5
       apiError.value = {}
@@ -398,7 +452,8 @@ const handleApiError = (error) => {
   const errorData = error.errorData || {}
   const errorCode = errorData.code
   const errorMessage = getErrorMessage(errorCode, errorData.message)
-  console.log(errorMessage)
+  console.log('API Error Code:', errorCode)
+  console.log('Error Data:', errorData)
   
   // Update API error display
   apiError.value = {
@@ -410,9 +465,12 @@ const handleApiError = (error) => {
   // Handle specific error types
   switch (errorCode) {
     case 'RATE_LIMITED':
+      console.log('Rate limited detected, starting block timer')
       isBlocked.value = true
       if (errorData.retryAfter || errorData.secondsRemaining) {
-        startBlockTimer(errorData.retryAfter || errorData.secondsRemaining)
+        const duration = errorData.retryAfter || errorData.secondsRemaining
+        console.log('Block duration:', duration)
+        startBlockTimer(duration)
       }
       break
       

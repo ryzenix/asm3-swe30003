@@ -96,10 +96,25 @@
             <button 
               v-if="!isLoggedIn"
               @click="$emit('open-login')" 
-              class="flex items-center gap-2 bg-white text-green-800 px-3 py-2 sm:px-4 sm:py-3 rounded-lg hover:bg-gray-50 transition-colors shadow-sm font-medium"
+              :disabled="props.isLoading"
+              :class="[
+                'flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-3 rounded-lg transition-colors shadow-sm font-medium',
+                props.isLoading 
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                  : 'bg-white text-green-800 hover:bg-gray-50'
+              ]"
             >
-              <i class="fas fa-user"></i> 
-              <span class="hidden sm:inline">Đăng nhập</span>
+              <span v-if="props.isLoading" class="flex items-center gap-2">
+                <svg class="animate-spin h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="hidden sm:inline">Đang kiểm tra...</span>
+              </span>
+              <span v-else class="flex items-center gap-2">
+                <i class="fas fa-user"></i> 
+                <span class="hidden sm:inline">Đăng nhập</span>
+              </span>
             </button>
             
             <!-- User Profile Button (when logged in) -->
@@ -262,6 +277,10 @@ const props = defineProps({
       phone: '0123 456 789',
       role: 'client'
     })
+  },
+  isLoading: {
+    type: Boolean,
+    default: false
   }
 });
 

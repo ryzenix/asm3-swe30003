@@ -59,7 +59,6 @@ class App {
         const StaffRoutes = require('../routes/StaffRoutes');
         const OrderRoutes = require('../routes/OrderRoutes');
         const PrescriptionRoutes = require('../routes/PrescriptionRoutes');
-        const CartRoutes = require('../routes/CartRoutes');
         
         // Initialize route instances
         const productRoutes = new ProductRoutes();
@@ -69,7 +68,6 @@ class App {
         const staffRoutes = new StaffRoutes();
         const orderRoutes = new OrderRoutes();
         const prescriptionRoutes = new PrescriptionRoutes();
-        const cartRoutes = new CartRoutes();
 
         // Mount routes
         this.app.use('/products', productRoutes.getRouter());
@@ -79,7 +77,6 @@ class App {
         this.app.use('/management/users', staffRoutes.getRouter());
         this.app.use('/orders', orderRoutes.getRouter());
         this.app.use('/prescriptions', prescriptionRoutes.getRouter());
-        this.app.use('/cart', cartRoutes.getRouter());
     }
 
     setupErrorHandling() {

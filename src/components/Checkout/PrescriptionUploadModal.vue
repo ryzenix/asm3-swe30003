@@ -89,113 +89,6 @@
               </div>
             </div>
 
-            <!-- Prescription Information Form -->
-            <div class="bg-gray-50 border border-gray-200 rounded-xl p-4">
-              <h4 class="text-gray-800 font-medium mb-4 flex items-center gap-2">
-                <i class="fas fa-info-circle text-gray-500"></i>
-                Thông tin đơn thuốc
-              </h4>
-              
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">
-                    Tên bệnh nhân <span class="text-red-500">*</span>
-                  </label>
-                  <input
-                    v-model="formData.patientName"
-                    type="text"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    placeholder="Nhập tên bệnh nhân"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">
-                    Tên bác sĩ <span class="text-red-500">*</span>
-                  </label>
-                  <input
-                    v-model="formData.doctorName"
-                    type="text"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    placeholder="Nhập tên bác sĩ"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">
-                    Số chứng chỉ hành nghề
-                  </label>
-                  <input
-                    v-model="formData.doctorLicense"
-                    type="text"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    placeholder="Nhập số chứng chỉ"
-                  />
-                </div>
-                
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">
-                    Tên phòng khám/bệnh viện
-                  </label>
-                  <input
-                    v-model="formData.clinicName"
-                    type="text"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    placeholder="Nhập tên cơ sở y tế"
-                  />
-                </div>
-                
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">
-                    Ngày kê đơn <span class="text-red-500">*</span>
-                  </label>
-                  <input
-                    v-model="formData.issueDate"
-                    type="date"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">
-                    Ngày hết hạn
-                  </label>
-                  <input
-                    v-model="formData.expiryDate"
-                    type="date"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  />
-                </div>
-              </div>
-              
-              <div class="mt-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">
-                  Chẩn đoán
-                </label>
-                <textarea
-                  v-model="formData.diagnosis"
-                  rows="2"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  placeholder="Nhập chẩn đoán bệnh"
-                ></textarea>
-              </div>
-              
-              <div class="mt-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">
-                  Ghi chú
-                </label>
-                <textarea
-                  v-model="formData.notes"
-                  rows="2"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  placeholder="Ghi chú thêm (nếu có)"
-                ></textarea>
-              </div>
-            </div>
-
             <!-- Upload Instructions -->
             <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
               <div class="flex items-start space-x-3">
@@ -450,24 +343,9 @@ const uploadProgress = ref(0)
 const error = ref('')
 const previewFileData = ref(null)
 
-// Form data for prescription metadata
-const formData = ref({
-  patientName: '',
-  doctorName: '',
-  doctorLicense: '',
-  clinicName: '',
-  issueDate: '',
-  expiryDate: '',
-  diagnosis: '',
-  notes: ''
-})
-
 // Computed
 const canSubmit = computed(() => {
-  const hasRequiredFields = formData.value.patientName.trim() && 
-                           formData.value.doctorName.trim() && 
-                           formData.value.issueDate
-  return hasRequiredFields && uploadedFiles.value.length > 0 && !uploading.value
+  return uploadedFiles.value.length > 0 && !uploading.value
 })
 
 // Methods
@@ -581,18 +459,6 @@ const resetForm = () => {
   previewFileData.value = null
   isDragOver.value = false
   
-  // Reset form data
-  formData.value = {
-    patientName: '',
-    doctorName: '',
-    doctorLicense: '',
-    clinicName: '',
-    issueDate: '',
-    expiryDate: '',
-    diagnosis: '',
-    notes: ''
-  }
-  
   // Reset file input
   if (fileInput.value) {
     fileInput.value.value = ''
@@ -629,86 +495,28 @@ const handleSubmit = async () => {
   error.value = ''
   
   try {
-    // Import prescription API service
-    const { usePrescriptionApi } = await import('../../services/prescriptionApi.js')
-    const { createPrescription, uploadPrescriptionImage } = usePrescriptionApi()
-    
-    // Create prescription data
-    const prescriptionData = {
-      patientName: formData.value.patientName,
-      doctorName: formData.value.doctorName,
-      doctorLicense: formData.value.doctorLicense,
-      clinicName: formData.value.clinicName,
-      issueDate: formData.value.issueDate,
-      expiryDate: formData.value.expiryDate,
-      diagnosis: formData.value.diagnosis,
-      notes: formData.value.notes,
-      prescriptionProducts: props.prescriptionProducts
-    }
-    
-    uploadProgress.value = 20
-    
-    // Create prescription record
-    const prescriptionResponse = await createPrescription(prescriptionData)
-    
-    if (!prescriptionResponse.success) {
-      throw new Error(prescriptionResponse.error || 'Failed to create prescription')
-    }
-    
-    uploadProgress.value = 40
-    
-    const prescriptionId = prescriptionResponse.data.id
-    const uploadedImageUrls = []
-    
-    // Upload images if any
-    if (uploadedFiles.value.length > 0) {
-      const totalFiles = uploadedFiles.value.length
-      
-      for (let i = 0; i < totalFiles; i++) {
-        const file = uploadedFiles.value[i]
-        
-        try {
-          const imageResponse = await uploadPrescriptionImage(prescriptionId, file.file)
-          
-          if (imageResponse.success) {
-            uploadedImageUrls.push({
-              name: file.name,
-              url: imageResponse.data.imageUrl,
-              type: file.type,
-              size: file.size
-            })
-          } else {
-            console.warn(`Failed to upload image ${file.name}:`, imageResponse.error)
-          }
-        } catch (imageError) {
-          console.warn(`Error uploading image ${file.name}:`, imageError)
-        }
-        
-        // Update progress
-        uploadProgress.value = 40 + ((i + 1) / totalFiles) * 50
+    // Simulate upload progress
+    const progressInterval = setInterval(() => {
+      uploadProgress.value += 10
+      if (uploadProgress.value >= 90) {
+        clearInterval(progressInterval)
       }
-    } else {
-      uploadProgress.value = 90
-    }
+    }, 200)
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 2000))
     
     uploadProgress.value = 100
     
-    // Emit success with prescription data
+    // Emit success with uploaded files
     emit('submit', {
-      prescriptionId: prescriptionId,
-      prescriptionData: {
-        ...prescriptionData,
-        id: prescriptionId,
-        files: uploadedImageUrls,
-        uploadedAt: new Date().toISOString(),
-        validationStatus: 'pending'
-      },
+      files: uploadedFiles.value,
       prescriptionProducts: props.prescriptionProducts
     })
     
-  } catch (err) {
-    console.error('Upload error:', err)
-    error.value = err.message || 'Có lỗi xảy ra khi tải lên đơn thuốc. Vui lòng thử lại.'
+  } catch (error) {
+    console.error('Upload error:', error)
+    error.value = 'Có lỗi xảy ra khi tải lên đơn thuốc. Vui lòng thử lại.'
   } finally {
     uploading.value = false
     uploadProgress.value = 0

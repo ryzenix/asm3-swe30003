@@ -83,12 +83,6 @@ class ProductRoutes {
             this.productController.getProduct.bind(this.productController)
         );
 
-        // Check product availability (for cart validation)
-        this.router.post('/check-availability',
-            this.authenticator.authenticateUser.bind(this.authenticator),
-            this.productController.checkAvailability.bind(this.productController)
-        );
-
         // Management routes (require superuser or pharmacist authentication)
         this.router.post('/management/create', 
             this.authenticator.authenticateSuperuserOrPharmacist.bind(this.authenticator),

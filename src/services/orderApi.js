@@ -1,5 +1,5 @@
 // Order API Service
-const API_BASE_URL = 'http://localhost:3000'
+const API_BASE_URL = 'http://localhost:3000/api'
 
 export function useOrderApi() {
   // Get orders list with pagination and filters
@@ -22,9 +22,10 @@ export function useOrderApi() {
       
       const response = await fetch(url, {
         method: 'GET',
-        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          // Add authorization header when available
+          // 'Authorization': `Bearer ${token}`
         }
       })
       
@@ -47,9 +48,9 @@ export function useOrderApi() {
     try {
       const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
         method: 'GET',
-        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          // 'Authorization': `Bearer ${token}`
         }
       })
       
@@ -71,10 +72,10 @@ export function useOrderApi() {
   async function updateOrderStatus(orderId, statusData) {
     try {
       const response = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
-        method: 'PATCH',
-        credentials: 'include',
+        method: 'PUT',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          // 'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(statusData)
       })
@@ -97,10 +98,10 @@ export function useOrderApi() {
   async function cancelOrder(orderId, cancelData) {
     try {
       const response = await fetch(`${API_BASE_URL}/orders/${orderId}/cancel`, {
-        method: 'POST',
-        credentials: 'include',
+        method: 'PUT',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          // 'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(cancelData)
       })
@@ -124,9 +125,9 @@ export function useOrderApi() {
     try {
       const response = await fetch(`${API_BASE_URL}/orders/${orderId}/delivery`, {
         method: 'PUT',
-        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          // 'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(deliveryData)
       })
@@ -153,13 +154,13 @@ export function useOrderApi() {
       if (params.dateFrom) queryParams.append('dateFrom', params.dateFrom)
       if (params.dateTo) queryParams.append('dateTo', params.dateTo)
       
-      const url = `${API_BASE_URL}/orders/admin/statistics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+      const url = `${API_BASE_URL}/orders/statistics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
       
       const response = await fetch(url, {
         method: 'GET',
-        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          // 'Authorization': `Bearer ${token}`
         }
       })
       

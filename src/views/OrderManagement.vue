@@ -513,24 +513,25 @@ async function fetchOrders() {
       params.dateTo = filters.value.date
     }
 
-    // Use real API
-    const data = await getOrdersList(params)
-    if (data.success) {
-      ordersList.value = data.data.orders || []
-      apiData.value = {
-        pagination: data.data.pagination || { totalRecords: 0, currentPage: 1, totalPages: 1, limit: 10, hasPrevPage: false, hasNextPage: false },
-        filters: data.data.filters || {}
-      }
-    } else {
-      throw new Error(data.error || 'Failed to fetch orders')
+    // For demo purposes, use mock data
+    const mockData = generateMockOrders(params)
+    
+    ordersList.value = mockData.data.orders
+    apiData.value = {
+      pagination: mockData.data.pagination,
+      filters: mockData.data.filters
     }
     
-    // Fallback to mock data if API fails
-    // const mockData = generateMockOrders(params)
-    // ordersList.value = mockData.data.orders
-    // apiData.value = {
-    //   pagination: mockData.data.pagination,
-    //   filters: mockData.data.filters
+    // Uncomment when API is ready
+    // const data = await getOrdersList(params)
+    // if (data.success) {
+    //   ordersList.value = data.data.orders
+    //   apiData.value = {
+    //     pagination: data.data.pagination,
+    //     filters: data.data.filters
+    //   }
+    // } else {
+    //   throw new Error(data.error || 'Failed to fetch orders')
     // }
   } catch (err) {
     console.error('Fetch orders error:', err)
@@ -791,7 +792,7 @@ function clearFilters() {
 }
 
 function viewOrderDetails(order) {
-  router.push(`/orders/${order.id}`)
+  router.push(`/order-details/${order.orderNumber}`)
 }
 
 function openStatusChangeModal(order) {
@@ -837,24 +838,27 @@ async function confirmStatusChange(statusData) {
   modalError.value = ''
   
   try {
-    // Use real API
-    const data = await updateOrderStatus(selectedOrder.value.id, statusData)
-    if (data.success) {
-      showToast(`Đã cập nhật trạng thái đơn hàng #${selectedOrder.value.orderNumber} thành công!`, 'success')
-      await fetchOrders()
-      closeStatusModal()
-    } else {
-      throw new Error(data.error || 'Failed to update order status')
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    // For demo purposes, update local data
+    const orderIndex = ordersList.value.findIndex(o => o.id === selectedOrder.value.id)
+    if (orderIndex !== -1) {
+      ordersList.value[orderIndex].status = statusData.status
     }
     
-    // Fallback for demo purposes
-    // await new Promise(resolve => setTimeout(resolve, 1000))
-    // const orderIndex = ordersList.value.findIndex(o => o.id === selectedOrder.value.id)
-    // if (orderIndex !== -1) {
-    //   ordersList.value[orderIndex].status = statusData.status
+    showToast(`Đã cập nhật trạng thái đơn hàng #${selectedOrder.value.orderNumber} thành công!`, 'success')
+    closeStatusModal()
+    
+    // Uncomment when API is ready
+    // const data = await updateOrderStatus(selectedOrder.value.id, statusData)
+    // if (data.success) {
+    //   showToast(`Đã cập nhật trạng thái đơn hàng #${selectedOrder.value.orderNumber} thành công!`, 'success')
+    //   await fetchOrders()
+    //   closeStatusModal()
+    // } else {
+    //   throw new Error(data.error || 'Failed to update order status')
     // }
-    // showToast(`Đã cập nhật trạng thái đơn hàng #${selectedOrder.value.orderNumber} thành công!`, 'success')
-    // closeStatusModal()
   } catch (err) {
     console.error('Update status error:', err)
     modalError.value = err.message || 'Có lỗi xảy ra khi cập nhật trạng thái đơn hàng'
@@ -870,24 +874,27 @@ async function confirmCancelOrder(cancelData) {
   modalError.value = ''
   
   try {
-    // Use real API
-    const data = await cancelOrder(selectedOrder.value.id, cancelData)
-    if (data.success) {
-      showToast(`Đã hủy đơn hàng #${selectedOrder.value.orderNumber} thành công!`, 'success')
-      await fetchOrders()
-      closeCancelModal()
-    } else {
-      throw new Error(data.error || 'Failed to cancel order')
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    // For demo purposes, update local data
+    const orderIndex = ordersList.value.findIndex(o => o.id === selectedOrder.value.id)
+    if (orderIndex !== -1) {
+      ordersList.value[orderIndex].status = 'cancelled'
     }
     
-    // Fallback for demo purposes
-    // await new Promise(resolve => setTimeout(resolve, 1000))
-    // const orderIndex = ordersList.value.findIndex(o => o.id === selectedOrder.value.id)
-    // if (orderIndex !== -1) {
-    //   ordersList.value[orderIndex].status = 'cancelled'
+    showToast(`Đã hủy đơn hàng #${selectedOrder.value.orderNumber} thành công!`, 'success')
+    closeCancelModal()
+    
+    // Uncomment when API is ready
+    // const data = await cancelOrder(selectedOrder.value.id, cancelData)
+    // if (data.success) {
+    //   showToast(`Đã hủy đơn hàng #${selectedOrder.value.orderNumber} thành công!`, 'success')
+    //   await fetchOrders()
+    //   closeCancelModal()
+    // } else {
+    //   throw new Error(data.error || 'Failed to cancel order')
     // }
-    // showToast(`Đã hủy đơn hàng #${selectedOrder.value.orderNumber} thành công!`, 'success')
-    // closeCancelModal()
   } catch (err) {
     console.error('Cancel order error:', err)
     modalError.value = err.message || 'Có lỗi xảy ra khi hủy đơn hàng'

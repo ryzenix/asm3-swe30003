@@ -1,18 +1,10 @@
 import { ref, computed, watch } from 'vue'
-import { useAuth } from './useAuth'
 
 // Global cart state
 const cartItems = ref([])
 const isCartOpen = ref(false)
-const isLoading = ref(false)
-const error = ref(null)
-
-// API base URL
-const API_BASE_URL = 'http://localhost:3000'
 
 export function useCart() {
-  const { isLoggedIn } = useAuth()
-
   // Computed properties
   const totalItems = computed(() => {
     return cartItems.value.reduce((total, item) => total + item.quantity, 0)
@@ -28,298 +20,87 @@ export function useCart() {
     return totalPrice.value.toLocaleString('vi-VN') + 'đ'
   })
 
-  // API helper function
-  const apiCall = async (url, options = {}) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}${url}`, {
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers
-        },
-        ...options
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || `HTTP error! status: ${response.status}`)
-      }
-
-      return data
-    } catch (err) {
-      console.error('API call error:', err)
-      throw err
-    }
-  }
-
-  // Load cart from backend
-  const loadCartFromBackend = async () => {
-    if (!isLoggedIn.value) return
-
-    try {
-      isLoading.value = true
-      error.value = null
-      
-      const response = await apiCall('/cart')
-      
-      if (response.success && response.data) {
-        cartItems.value = response.data.items || []
-      }
-    } catch (err) {
-      console.error('Error loading cart from backend:', err)
-      error.value = err.message
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  // Sync local cart with backend when user logs in
-  const syncCartWithBackend = async () => {
-    if (!isLoggedIn.value) return
-
-    try {
-      isLoading.value = true
-      error.value = null
-
-      // Get local cart items
-      const localCartItems = cartItems.value
-
-      if (localCartItems.length > 0) {
-        // Sync with backend
-        const response = await apiCall('/cart/sync', {
-          method: 'POST',
-          body: JSON.stringify({ localCartItems })
-        })
-
-        if (response.success && response.data) {
-          cartItems.value = response.data.items || []
-          showCartFeedback('sync', 'Đã đồng bộ giỏ hàng')
-        }
-      } else {
-        // Just load from backend
-        await loadCartFromBackend()
-      }
-    } catch (err) {
-      console.error('Error syncing cart with backend:', err)
-      error.value = err.message
-    } finally {
-      isLoading.value = false
-    }
-  }
-
   // Cart actions
-  const addToCart = async (product, quantity = 1) => {
-    try {
-      isLoading.value = true
-      error.value = null
+  const addToCart = (product, quantity = 1) => {
+    const existingItem = cartItems.value.find(item => item.id === product.id)
+    
+    if (existingItem) {
+      existingItem.quantity += quantity
+      // Trigger animation for existing item
+      triggerItemAnimation(product.id, 'increase')
+    } else {
+      cartItems.value.push({
+        ...product,
+        quantity: quantity,
+        addedAt: new Date()
+      })
+      // Trigger animation for new item
+      triggerItemAnimation(product.id, 'add')
+    }
+    
+    // Save to localStorage
+    saveCartToStorage()
+    
+    // Show success feedback
+    showCartFeedback('add', product.title)
+  }
 
-      if (isLoggedIn.value) {
-        // Add to backend cart
-        const response = await apiCall('/cart/add', {
-          method: 'POST',
-          body: JSON.stringify({
-            productId: product.id,
-            quantity: quantity
-          })
-        })
-
-        if (response.success && response.data) {
-          cartItems.value = response.data.cart.items || []
-          showCartFeedback('add', product.title)
-          triggerItemAnimation(product.id, 'add')
-        }
-      } else {
-        // Add to local cart
-        const existingItem = cartItems.value.find(item => item.id === product.id)
-        
-        if (existingItem) {
-          existingItem.quantity += quantity
-          triggerItemAnimation(product.id, 'increase')
-        } else {
-          cartItems.value.push({
-            ...product,
-            quantity: quantity,
-            addedAt: new Date().toISOString()
-          })
-          triggerItemAnimation(product.id, 'add')
-        }
-        
-        // Save to localStorage
-        saveCartToStorage()
-        showCartFeedback('add', product.title)
-      }
-    } catch (err) {
-      console.error('Error adding to cart:', err)
-      error.value = err.message
-      
-      // Fallback to local storage
-      if (isLoggedIn.value) {
-        const existingItem = cartItems.value.find(item => item.id === product.id)
-        
-        if (existingItem) {
-          existingItem.quantity += quantity
-        } else {
-          cartItems.value.push({
-            ...product,
-            quantity: quantity,
-            addedAt: new Date().toISOString()
-          })
-        }
-        
-        saveCartToStorage()
-        showCartFeedback('add', product.title)
-      }
-    } finally {
-      isLoading.value = false
+  const removeFromCart = (productId) => {
+    const index = cartItems.value.findIndex(item => item.id === productId)
+    if (index > -1) {
+      const removedItem = cartItems.value[index]
+      cartItems.value.splice(index, 1)
+      saveCartToStorage()
+      showCartFeedback('remove', removedItem.title)
     }
   }
 
-  const removeFromCart = async (productId) => {
-    try {
-      isLoading.value = true
-      error.value = null
-
-      if (isLoggedIn.value) {
-        // Remove from backend cart
-        const response = await apiCall(`/cart/items/${productId}`, {
-          method: 'DELETE'
-        })
-
-        if (response.success && response.data) {
-          cartItems.value = response.data.cart.items || []
-          showCartFeedback('remove', response.data.removedItem?.title || 'Sản phẩm')
-        }
-      } else {
-        // Remove from local cart
-        const index = cartItems.value.findIndex(item => item.id === productId)
-        if (index > -1) {
-          const removedItem = cartItems.value[index]
-          cartItems.value.splice(index, 1)
-          saveCartToStorage()
-          showCartFeedback('remove', removedItem.title)
-        }
-      }
-    } catch (err) {
-      console.error('Error removing from cart:', err)
-      error.value = err.message
-      
-      // Fallback to local removal
-      const index = cartItems.value.findIndex(item => item.id === productId)
-      if (index > -1) {
-        const removedItem = cartItems.value[index]
-        cartItems.value.splice(index, 1)
-        saveCartToStorage()
-        showCartFeedback('remove', removedItem.title)
-      }
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  const updateQuantity = async (productId, newQuantity) => {
-    try {
-      isLoading.value = true
-      error.value = null
-
-      if (newQuantity <= 0) {
-        await removeFromCart(productId)
-        return
-      }
-
-      if (isLoggedIn.value) {
-        // Update in backend cart
-        const response = await apiCall(`/cart/items/${productId}`, {
-          method: 'PUT',
-          body: JSON.stringify({ quantity: newQuantity })
-        })
-
-        if (response.success && response.data) {
-          cartItems.value = response.data.items || []
-        }
-      } else {
-        // Update local cart
-        const item = cartItems.value.find(item => item.id === productId)
-        if (item) {
-          const oldQuantity = item.quantity
-          item.quantity = newQuantity
-          saveCartToStorage()
-          
-          // Trigger animation based on quantity change
-          if (newQuantity > oldQuantity) {
-            triggerItemAnimation(productId, 'increase')
-          } else {
-            triggerItemAnimation(productId, 'decrease')
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Error updating quantity:', err)
-      error.value = err.message
-      
-      // Fallback to local update
-      const item = cartItems.value.find(item => item.id === productId)
-      if (item) {
-        item.quantity = newQuantity
-        saveCartToStorage()
-      }
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  const increaseQuantity = async (productId) => {
+  const updateQuantity = (productId, newQuantity) => {
     const item = cartItems.value.find(item => item.id === productId)
     if (item) {
-      await updateQuantity(productId, item.quantity + 1)
+      const oldQuantity = item.quantity
+      if (newQuantity <= 0) {
+        removeFromCart(productId)
+      } else {
+        item.quantity = newQuantity
+        saveCartToStorage()
+        
+        // Trigger animation based on quantity change
+        if (newQuantity > oldQuantity) {
+          triggerItemAnimation(productId, 'increase')
+        } else {
+          triggerItemAnimation(productId, 'decrease')
+        }
+      }
+    }
+  }
+
+  const increaseQuantity = (productId) => {
+    const item = cartItems.value.find(item => item.id === productId)
+    if (item) {
+      item.quantity += 1
+      saveCartToStorage()
       triggerItemAnimation(productId, 'increase')
     }
   }
 
-  const decreaseQuantity = async (productId) => {
+  const decreaseQuantity = (productId) => {
     const item = cartItems.value.find(item => item.id === productId)
     if (item) {
       if (item.quantity > 1) {
-        await updateQuantity(productId, item.quantity - 1)
+        item.quantity -= 1
+        saveCartToStorage()
         triggerItemAnimation(productId, 'decrease')
       } else {
-        await removeFromCart(productId)
+        removeFromCart(productId)
       }
     }
   }
 
-  const clearCart = async () => {
-    try {
-      isLoading.value = true
-      error.value = null
-
-      if (isLoggedIn.value) {
-        // Clear backend cart
-        const response = await apiCall('/cart', {
-          method: 'DELETE'
-        })
-
-        if (response.success) {
-          cartItems.value = []
-          showCartFeedback('clear')
-        }
-      } else {
-        // Clear local cart
-        cartItems.value = []
-        saveCartToStorage()
-        showCartFeedback('clear')
-      }
-    } catch (err) {
-      console.error('Error clearing cart:', err)
-      error.value = err.message
-      
-      // Fallback to local clear
-      cartItems.value = []
-      saveCartToStorage()
-      showCartFeedback('clear')
-    } finally {
-      isLoading.value = false
-    }
+  const clearCart = () => {
+    cartItems.value = []
+    saveCartToStorage()
+    showCartFeedback('clear')
   }
 
   const getItemQuantity = (productId) => {
@@ -414,30 +195,13 @@ export function useCart() {
     loadCartFromStorage()
   }
 
-  // Watch for cart changes and save to storage (only for local cart)
-  watch(cartItems, () => {
-    if (!isLoggedIn.value) {
-      saveCartToStorage()
-    }
-  }, { deep: true })
-
-  // Watch for login state changes
-  watch(isLoggedIn, async (newValue, oldValue) => {
-    if (newValue && !oldValue) {
-      // User just logged in, sync cart
-      await syncCartWithBackend()
-    } else if (!newValue && oldValue) {
-      // User just logged out, load from localStorage
-      loadCartFromStorage()
-    }
-  })
+  // Watch for cart changes and save to storage
+  watch(cartItems, saveCartToStorage, { deep: true })
 
   return {
     // State
-    cartItems,
+    cartItems: computed(() => cartItems.value),
     isCartOpen: computed(() => isCartOpen.value),
-    isLoading: computed(() => isLoading.value),
-    error: computed(() => error.value),
     totalItems,
     totalPrice,
     formattedTotalPrice,
@@ -458,10 +222,6 @@ export function useCart() {
     openCart,
     closeCart,
     toggleCart,
-    
-    // Backend sync
-    loadCartFromBackend,
-    syncCartWithBackend,
     
     // Utils
     loadCartFromStorage,

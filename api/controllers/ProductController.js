@@ -413,43 +413,6 @@ class ProductController {
             throw new Error(`Failed to process images: ${error.message}`);
         }
     }
-
-    async checkAvailability(req, res, next) {
-        try {
-            const { productIds } = req.body;
-
-            if (!Array.isArray(productIds) || productIds.length === 0) {
-                const { ValidationError } = require('../core/errors');
-                throw ValidationError.missingFields(['productIds']);
-            }
-
-            // Get product availability information
-            const placeholders = productIds.map((_, index) => `$${index + 1}`).join(',');
-            const { rows: products } = await this.productModel.db.query(
-                `SELECT id, stock_quantity, is_active FROM products WHERE id IN (${placeholders})`,
-                productIds
-            );
-
-            const availabilityData = productIds.map(id => {
-                const product = products.find(p => p.id === parseInt(id));
-                return {
-                    id: parseInt(id),
-                    stockQuantity: product ? product.stock_quantity : 0,
-                    isActive: product ? product.is_active : false,
-                    exists: !!product
-                };
-            });
-
-            res.json({
-                success: true,
-                data: availabilityData
-            });
-
-        } catch (error) {
-            this.logger.error('Check availability controller error:', error);
-            next(error);
-        }
-    }
 }
 
 module.exports = ProductController; 

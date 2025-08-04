@@ -401,46 +401,14 @@ const clearError = () => {
   // Error clearing is handled by parent component
 }
 
-const handleSubmit = async () => {
+const handleSubmit = () => {
   if (!canSubmit.value) return
   
-  try {
-    // Import prescription API
-    const { usePrescriptionApi } = await import('../../services/prescriptionApi.js')
-    const { updatePrescriptionStatus } = usePrescriptionApi()
-    
-    const validationData = {
-      status: validationForm.value.status,
-      reviewNotes: validationForm.value.notes.trim()
-    }
-    
-    // Get prescription ID from order data
-    const prescriptionId = props.order?.prescriptionData?.id
-    
-    if (!prescriptionId) {
-      throw new Error('Không tìm thấy ID đơn thuốc')
-    }
-    
-    const response = await updatePrescriptionStatus(prescriptionId, validationData)
-    
-    if (response.success) {
-      emit('validate', {
-        prescriptionId,
-        pharmacistName: validationForm.value.pharmacistName.trim(),
-        status: validationForm.value.status,
-        notes: validationForm.value.notes.trim(),
-        validatedAt: new Date().toISOString(),
-        response: response.data
-      })
-    } else {
-      throw new Error(response.error || 'Cập nhật trạng thái đơn thuốc thất bại')
-    }
-  } catch (error) {
-    console.error('Prescription validation error:', error)
-    emit('validate', {
-      error: error.message || 'Có lỗi xảy ra khi xác thực đơn thuốc'
-    })
-  }
+  emit('validate', {
+    pharmacistName: validationForm.value.pharmacistName.trim(),
+    status: validationForm.value.status,
+    notes: validationForm.value.notes.trim()
+  })
 }
 
 const formatPrice = (price) => {

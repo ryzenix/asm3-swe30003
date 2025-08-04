@@ -32,11 +32,11 @@
       <!-- Top Row: Logo, Search, and Actions -->
       <div class="flex items-center justify-between gap-3">
         <!-- Logo and Slogan -->
-        <div class="flex-shrink-0">
+        <router-link to="/" class="flex-shrink-0">
           <div class="flex items-center gap-2">
             <img src="/logo.webp" alt="Long Chau Logo" class="w-54 h-15 p-1" />
           </div>
-        </div>
+        </router-link>
 
         <!-- Search bar - Hidden on mobile, shown on tablet+ -->
         <div class="flex-1 mx-4 hidden md:block max-w-2xl">
@@ -75,19 +75,22 @@
 
           <!-- Cart -->
           <button 
-            class="flex items-center gap-2 bg-orange-500 px-3 py-2 sm:px-4 sm:py-3 rounded-lg hover:bg-orange-600 transition-colors shadow-sm"
-            @click="$emit('open-cart')"
+            class="flex items-center gap-2 bg-orange-500 px-3 py-2 sm:px-4 sm:py-3 rounded-lg hover:bg-orange-600 transition-colors duration-200 shadow-sm"
+            @click="toggleCart"
           >
             <div class="relative">
               <i class="fas fa-shopping-cart"></i>
               <span 
-                v-if="cartCount > 0"
+                v-if="totalItems > 0"
                 class="absolute -top-2 -right-2 bg-red-500 text-xs rounded-full h-5 w-5 flex items-center justify-center text-white"
               >
-                {{ cartCount }}
+                {{ totalItems > 99 ? '99+' : totalItems }}
               </span>
             </div>
-            <span class="hidden sm:inline font-medium">Giỏ hàng</span>
+            <span class="hidden sm:inline font-medium">
+              Giỏ hàng
+              <span v-if="totalItems > 0" class="text-xs opacity-90">({{ totalItems }})</span>
+            </span>
           </button>
 
           <!-- Login/User Profile Section -->
@@ -130,10 +133,9 @@
               <i class="fas fa-chevron-down text-xs transition-transform" :class="{ 'rotate-180': showUserProfile }"></i>
             </button>
 
-            <!-- User Profile Dropdown -->
+            <!-- User Profile Dropdown (Desktop) / Modal (Mobile) -->
             <div 
-
-              v-if="showUserProfile && isLoggedIn" 
+              v-if="showUserProfile && isLoggedIn && !isMobile" 
               v-click-outside="closeUserProfile"
               class="absolute right-0 top-full mt-2 z-50"
             >
@@ -251,13 +253,27 @@
         />
       </div>
     </nav>
+
+    <!-- Mobile User Profile Modal -->
+    <UserProfileModal
+      v-if="showUserProfile && isLoggedIn && isMobile"
+      :user="user"
+      @close="closeUserProfile"
+      @logout="handleLogout"
+      @view-orders="handleViewOrders"
+      @edit-profile="handleEditProfile"
+      @address-book="handleAddressBook"
+      @favorites="handleFavorites"
+    />
   </header>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import NavigationDropdown from './NavigationDropdown.vue'
 import UserProfileModal from './UserProfileModal.vue'
+import { useCategories } from '../../composables/useCategories.js'
+import { useCart } from '../../composables/useCart.js'
 
 // Props
 const props = defineProps({
@@ -286,8 +302,20 @@ const props = defineProps({
 
 console.log(props.user)
 
+// Mobile detection
+const windowWidth = ref(window.innerWidth)
+const isMobile = computed(() => windowWidth.value < 768) // md breakpoint
+
+// Update window width on resize
+const updateWindowWidth = () => {
+  windowWidth.value = window.innerWidth
+}
+
 // Define emits
 const emit = defineEmits(['open-login', 'open-cart', 'navigation-click', 'search', 'logout'])
+
+// Cart composable
+const { totalItems, toggleCart } = useCart()
 
 // State
 const showMobileMenu = ref(false)
@@ -299,6 +327,9 @@ const searchKeywords = ref([
   'canxi', 'bổ não', 'Vitamin', 'sữa rửa mặt', 'chăm sóc mẹ bé', 'omega 3'
 ])
 
+// Categories composable
+const { mainCategories, getSubcategories } = useCategories()
+
 // Computed property for user initials
 const userInitials = computed(() => {
   if (!props.user?.name) return 'U'
@@ -309,77 +340,58 @@ const userInitials = computed(() => {
   return names[0][0]
 })
 
-// Navigation items with dropdown data
-const navigationItems = ref([
-  {
-    name: 'Thuốc',
-    icon: 'fas fa-pills',
-    dropdown: [
-      { name: 'Thuốc kê đơn', description: 'Thuốc theo toa bác sĩ', slug: 'thuoc-ke-don' },
-      { name: 'Thuốc không kê đơn', description: 'Thuốc OTC an toàn', slug: 'thuoc-otc' },
-      { name: 'Thuốc truyền thống', description: 'Đông y, thảo dược', slug: 'thuoc-dong-y' },
-      { name: 'Thuốc cảm cúm', description: 'Điều trị triệu chứng cảm cúm', slug: 'thuoc-cam-cum' },
-      { name: 'Thuốc đau đầu', description: 'Giảm đau, hạ sốt', slug: 'thuoc-dau-dau' }
-    ]
-  },
-  {
-    name: 'Thực phẩm chức năng',
-    icon: 'fas fa-leaf',
-    dropdown: [
-      { name: 'Vitamin & Khoáng chất', description: 'Bổ sung dinh dưỡng thiết yếu', slug: 'vitamin-khoang-chat' },
-      { name: 'Tăng cường miễn dịch', description: 'Nâng cao sức đề kháng', slug: 'tang-cuong-mien-dich' },
-      { name: 'Hỗ trợ tiêu hóa', description: 'Men vi sinh, enzyme', slug: 'ho-tro-tieu-hoa' },
-      { name: 'Bổ não, cải thiện trí nhớ', description: 'DHA, Omega-3', slug: 'bo-nao-tri-nho' },
-      { name: 'Hỗ trợ xương khớp', description: 'Glucosamine, Calcium', slug: 'ho-tro-xuong-khop' }
-    ]
-  },
-  {
-    name: 'Dược mỹ phẩm',
-    icon: 'fas fa-spa',
-    dropdown: [
-      { name: 'Chống nắng', description: 'Kem chống nắng SPF cao', slug: 'chong-nang' },
-      { name: 'Trị mụn', description: 'Sản phẩm điều trị mụn hiệu quả', slug: 'tri-mun' },
-      { name: 'Chống lão hóa', description: 'Serum, kem chống nhăn', slug: 'chong-lao-hoa' },
-      { name: 'Dưỡng ẩm', description: 'Kem dưỡng cho da khô', slug: 'duong-am' },
-      { name: 'Làm sạch da', description: 'Sữa rửa mặt, tẩy trang', slug: 'lam-sach-da' }
-    ]
-  },
-  {
-    name: 'Chăm sóc cá nhân',
-    icon: 'fas fa-user-check',
-    dropdown: [
-      { name: 'Vệ sinh răng miệng', description: 'Kem đánh răng, nước súc miệng', slug: 've-sinh-rang-mieng' },
-      { name: 'Chăm sóc tóc', description: 'Dầu gội, dầu xả chuyên dụng', slug: 'cham-soc-toc' },
-      { name: 'Khử mùi cơ thể', description: 'Lăn khử mùi, xịt body', slug: 'khu-mui-co-the' },
-      { name: 'Tắm gội', description: 'Sữa tắm, xà phòng', slug: 'tam-goi' }
-    ]
-  },
-  {
-    name: 'Mẹ & bé',
-    icon: 'fas fa-baby',
-    dropdown: [
-      { name: 'Sữa bột', description: 'Sữa công thức các độ tuổi', slug: 'sua-bot' },
-      { name: 'Bỉm tã', description: 'Tã giấy, tã vải', slug: 'bim-ta' },
-      { name: 'Đồ dùng cho bé', description: 'Bình sữa, ty ngậm', slug: 'do-dung-cho-be' },
-      { name: 'Chăm sóc mẹ bầu', description: 'Vitamin, sản phẩm cho mẹ', slug: 'cham-soc-me-bau' },
-      { name: 'Thực phẩm ăn dặm', description: 'Bột ăn dặm, cháo dinh dưỡng', slug: 'thuc-pham-an-dam' }
-    ]
-  },
-  {
-    name: 'Dụng cụ y tế',
-    icon: 'fas fa-stethoscope',
-    dropdown: [
-      { name: 'Máy đo huyết áp', description: 'Omron, Microlife', slug: 'may-do-huyet-ap' },
-      { name: 'Máy đo đường huyết', description: 'Que thử, kim chích', slug: 'may-do-duong-huyet' },
-      { name: 'Nhiệt kế', description: 'Điện tử, hồng ngoại', slug: 'nhiet-ke' },
-      { name: 'Khẩu trang y tế', description: '3 lớp, N95', slug: 'khau-trang-y-te' },
-      { name: 'Băng gạc', description: 'Băng y tế, băng dính', slug: 'bang-gac' }
-    ]
-  },
-  { name: 'Bệnh lý', icon: 'fas fa-heartbeat', slug: 'benh-ly' },
-  { name: 'Góc sức khỏe', icon: 'fas fa-heart', slug: 'goc-suc-khoe' },
-  { name: 'Tin tức', icon: 'fas fa-newspaper', slug: 'tin-tuc' }
-])
+// Helper function to create slug from name
+const createSlug = (name) => {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single
+    .trim('-') // Remove leading/trailing hyphens
+}
+
+// Icon mapping for categories
+const categoryIcons = {
+  'medicine': 'fas fa-pills',
+  'supplement': 'fas fa-leaf', 
+  'cosmeceutical': 'fas fa-spa',
+  'personal_care': 'fas fa-user-check',
+  'mother_baby': 'fas fa-baby',
+  'medical_device': 'fas fa-stethoscope'
+}
+
+// Navigation items generated from categories system
+const navigationItems = computed(() => {
+  const items = mainCategories.value.map(category => {
+    const subcategories = getSubcategories(category.id)
+    
+    return {
+      id: category.id,
+      name: category.name,
+      icon: categoryIcons[category.key] || category.icon,
+      slug: createSlug(category.name),
+      dropdown: subcategories.map(sub => ({
+        id: sub.id,
+        name: sub.name,
+        description: sub.description || `Sản phẩm ${sub.name.toLowerCase()}`,
+        slug: createSlug(sub.name),
+        categoryId: category.id,
+        subcategoryId: sub.id
+      }))
+    }
+  })
+
+  // Add additional static navigation items
+  items.push(
+    { name: 'Bệnh lý', icon: 'fas fa-heartbeat', slug: 'benh-ly' },
+    { name: 'Góc sức khỏe', icon: 'fas fa-heart', slug: 'goc-suc-khoe' },
+    { name: 'Tin tức', icon: 'fas fa-newspaper', slug: 'tin-tuc' }
+  )
+
+  return items
+})
 
 // Methods
 const toggleMobileMenu = () => {
@@ -474,6 +486,8 @@ watch(() => props.isLoggedIn, (newValue, oldValue) => {
   }
 })
 
+// Simplified - no complex cart animations
+
 // Click outside directive
 const vClickOutside = {
   beforeMount(el, binding) {
@@ -488,6 +502,15 @@ const vClickOutside = {
     document.removeEventListener('click', el.clickOutsideEvent)
   }
 }
+
+// Lifecycle hooks
+onMounted(() => {
+  window.addEventListener('resize', updateWindowWidth)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateWindowWidth)
+})
 </script>
 
 <style scoped>

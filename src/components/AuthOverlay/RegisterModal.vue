@@ -52,7 +52,7 @@
               errors.fullName 
                 ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-transparent' 
                 : 'border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent'
-            ]" @blur="validateField('fullName')" @input="clearFieldError('fullName')" autocomplete="name" />
+            ]" @blur="validateFieldWrapper('fullName')" @input="clearFieldError('fullName')" autocomplete="name" />
           <p v-if="errors.fullName" class="text-xs text-red-500 mt-1 flex items-center">
             <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd"
@@ -73,7 +73,7 @@
               errors.email 
                 ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-transparent' 
                 : 'border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent'
-            ]" @blur="validateField('email')" @input="clearFieldError('email')" autocomplete="email" />
+            ]" @blur="validateFieldWrapper('email')" @input="clearFieldError('email')" autocomplete="email" />
           <p v-if="errors.email" class="text-xs text-red-500 mt-1 flex items-center">
             <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd"
@@ -94,7 +94,7 @@
               errors.phone 
                 ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-transparent' 
                 : 'border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent'
-            ]" @blur="validateField('phone')" @input="clearFieldError('phone')" maxlength="15" autocomplete="tel" />
+            ]" @blur="validateFieldWrapper('phone')" @input="clearFieldError('phone')" maxlength="15" autocomplete="tel" />
           <p v-if="errors.phone" class="text-xs text-red-500 mt-1 flex items-center">
             <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd"
@@ -117,7 +117,7 @@
                 errors.password 
                   ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-transparent' 
                   : 'border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent'
-              ]" @blur="validateField('password')" @input="clearFieldError('password')" autocomplete="new-password" />
+              ]" @blur="validateFieldWrapper('password')" @input="clearFieldError('password')" autocomplete="new-password" />
             <button type="button" @click="showPassword = !showPassword"
               class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
               tabindex="-1">
@@ -168,7 +168,7 @@
               errors.confirmPassword 
                 ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-transparent' 
                 : 'border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent'
-            ]" @blur="validateField('confirmPassword')" @input="clearFieldError('confirmPassword')" autocomplete="new-password" />
+            ]" @blur="validateFieldWrapper('confirmPassword')" @input="clearFieldError('confirmPassword')" autocomplete="new-password" />
           <p v-if="errors.confirmPassword" class="text-xs text-red-500 mt-1 flex items-center">
             <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd"
@@ -198,7 +198,7 @@
               errors.dateOfBirth 
                 ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-transparent' 
                 : 'border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent'
-            ]" @blur="validateField('dateOfBirth')" @input="clearFieldError('dateOfBirth')" />
+            ]" @blur="validateFieldWrapper('dateOfBirth')" @input="clearFieldError('dateOfBirth')" />
           <p v-if="errors.dateOfBirth" class="text-xs text-red-500 mt-1 flex items-center">
             <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd"
@@ -266,17 +266,13 @@
         </div>
 
         <!-- API Error Display -->
-        <div v-if="apiError.message" class="mb-4 p-3 rounded-lg" :class="getErrorDisplayClass(apiError.code)">
+        <div v-if="apiError" class="mb-4 p-3 rounded-lg" :class="getErrorDisplayClass('VALIDATION_ERROR')">
           <div class="flex items-start">
             <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
             </svg>
             <div class="flex-1">
-              <p class="text-sm font-medium">{{ apiError.message }}</p>
-              <!-- Show additional error details if available -->
-              <div v-if="apiError.details" class="mt-1">
-                <p class="text-xs">{{ apiError.details }}</p>
-              </div>
+              <p class="text-sm font-medium">{{ apiError }}</p>
             </div>
           </div>
         </div>
@@ -370,28 +366,26 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { useErrorHandler } from '../../composables/useErrorHandler'
 
 const emit = defineEmits(['back', 'close', 'auth-success'])
 
-// Error code to Vietnamese message mapping (matching backend ERROR_CODES)
-const ERROR_MESSAGES = {
-  VALIDATION_ERROR: 'Thông tin không hợp lệ',
-  AUTHENTICATION_FAILED: 'Email hoặc mật khẩu không chính xác',
-  AUTHORIZATION_FAILED: 'Không có quyền truy cập',
-  USER_NOT_FOUND: 'Tài khoản không tồn tại hoặc đã bị vô hiệu hóa',
-  USER_EXISTS: 'Email này đã được sử dụng',
-  RATE_LIMITED: 'Quá nhiều yêu cầu. Vui lòng thử lại sau',
-  SERVER_ERROR: 'Lỗi máy chủ. Vui lòng thử lại sau',
-  MISSING_FIELDS: 'Vui lòng nhập đầy đủ thông tin bắt buộc',
-  INVALID_FORMAT: 'Định dạng không hợp lệ',  
-  PASSWORD_WEAK: 'Mật khẩu không đủ mạnh',
-  ACCOUNT_BLOCKED: 'Tài khoản đã bị khóa tạm thời'
-}
+// Use centralized error handler
+const {
+  errors,
+  apiError,
+  clearAllErrors,
+  clearFieldError,
+  setFieldError,
+  handleApiError,
+  makeApiRequest,
+  validateField,
+  validateForm: validateFormCentralized
+} = useErrorHandler()
 
 // Form state
 const showPassword = ref(false)
 const isLoading = ref(false)
-const apiError = ref({})
 const showSuccess = ref(false)
 const registeredUser = ref(null)
 const successMessage = ref('')
@@ -406,16 +400,6 @@ const form = ref({
   gender: '',
   agreeTerms: false,
   agreeMarketing: false
-})
-
-const errors = ref({
-  fullName: '',
-  email: '',
-  phone: '',
-  password: '',
-  confirmPassword: '',
-  dateOfBirth: '',
-  agreeTerms: ''
 })
 
 // Maximum date (18 years ago from today)
@@ -455,63 +439,14 @@ const getStrengthText = (strength) => {
   return texts[strength - 1] || ''
 }
 
-// Validation rules
-const validationRules = {
-  fullName: (value) => {
-    if (!value.trim()) return 'Họ và tên là bắt buộc'
-    if (value.trim().length < 2) return 'Họ và tên phải có ít nhất 2 ký tự'
-    if (!/^[a-zA-ZÀ-ỹ\s]+$/.test(value)) return 'Họ và tên chỉ được chứa chữ cái và khoảng trắng'
-    return ''
-  },
-
-  email: (value) => {
-    if (!value.trim()) return 'Email là bắt buộc'
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(value)) return 'Email không hợp lệ'
-    return ''
-  },
-
-  phone: (value) => {
-    if (!value.trim()) return 'Số điện thoại là bắt buộc'
-    const phoneRegex = /^(\+84|84|0)[3|5|7|8|9]\d{8}$/
-    if (!phoneRegex.test(value.replace(/\s/g, ''))) return 'Số điện thoại không hợp lệ'
-    return ''
-  },
-
-  password: (value) => {
-    if (!value) return 'Mật khẩu là bắt buộc'
-    if (value.length < 8) return 'Mật khẩu phải có ít nhất 8 ký tự'
-    return ''
-  },
-
-  confirmPassword: (value) => {
-    if (!value) return 'Xác nhận mật khẩu là bắt buộc'
-    if (value !== form.value.password) return 'Mật khẩu không khớp'
-    return ''
-  },
-
-  dateOfBirth: (value) => {
-    if (!value) return ''
-    const birthDate = new Date(value)
-    const today = new Date()
-    const age = today.getFullYear() - birthDate.getFullYear()
-
-    if (age < 18) return 'Bạn phải từ 18 tuổi trở lên'
-    if (age > 120) return 'Ngày sinh không hợp lệ'
-    return ''
-  },
-
-  agreeTerms: (value) => {
-    if (!value) return 'Bạn phải đồng ý với điều khoản sử dụng'
-    return ''
-  }
+// Validation wrapper to use centralized validator
+const validateFieldWrapper = (fieldName) => {
+  const value = form.value[fieldName]
+  const extraParam = fieldName === 'confirmPassword' ? form.value.password : null
+  return validateField(fieldName, value, extraParam)
 }
 
-// Error handling utilities (matching LoginModal pattern)
-const getErrorMessage = (errorCode, fallbackMessage = '') => {
-  return ERROR_MESSAGES[errorCode] || fallbackMessage || 'Có lỗi xảy ra. Vui lòng thử lại'
-}
-
+// Error display styling
 const getErrorDisplayClass = (errorCode) => {
   const baseClasses = 'border'
   
@@ -531,32 +466,19 @@ const getErrorDisplayClass = (errorCode) => {
   }
 }
 
-// Validate individual field
-const validateField = (fieldName) => {
-  const rule = validationRules[fieldName]
-  if (rule) {
-    errors.value[fieldName] = rule(form.value[fieldName])
-  }
-}
-
-// Clear field error
-const clearFieldError = (fieldName) => {
-  errors.value[fieldName] = ''
-  apiError.value = {}
-}
-
-// Validate all fields
+// Validate form using centralized validator
 const validateForm = () => {
-  let isValid = true
-
-  Object.keys(validationRules).forEach(fieldName => {
-    validateField(fieldName)
-    if (errors.value[fieldName]) {
-      isValid = false
-    }
-  })
-
-  return isValid
+  const validationRules = [
+    { field: 'fullName', value: form.value.fullName },
+    { field: 'email', value: form.value.email },
+    { field: 'phone', value: form.value.phone },
+    { field: 'password', value: form.value.password },
+    { field: 'confirmPassword', value: form.value.confirmPassword, extraParam: form.value.password },
+    { field: 'dateOfBirth', value: form.value.dateOfBirth },
+    { field: 'agreeTerms', value: form.value.agreeTerms }
+  ]
+  
+  return validateFormCentralized(form.value, validationRules)
 }
 
 // Form validity check
@@ -575,28 +497,19 @@ const isFormValid = computed(() => {
 // Watch for password changes to revalidate confirm password
 watch(() => form.value.password, () => {
   if (form.value.confirmPassword && errors.value.confirmPassword) {
-    validateField('confirmPassword')
+    validateFieldWrapper('confirmPassword')
   }
 })
 
 // API Service Functions
 const checkEmailExists = async (email) => {
   try {
-    const response = await fetch('http://localhost:3000/auth/user/check-email', {
+    const data = await makeApiRequest('http://localhost:3000/auth/user/check-email', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
       body: JSON.stringify({ email })
     })
-
-    const data = await response.json()
+    console.log('Email check response:', data)
     
-    if (!response.ok) {
-      throw new Error(data.error?.message || 'Failed to check email')
-    }
-
     return data.data?.exists || false
   } catch (error) {
     console.error('Email check error:', error)
@@ -605,25 +518,10 @@ const checkEmailExists = async (email) => {
 }
 
 const registerUser = async (userData) => {
-  const response = await fetch('http://localhost:3000/auth/user/register', {
+  return await makeApiRequest('http://localhost:3000/auth/user/register', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
     body: JSON.stringify(userData)
   })
-
-  const data = await response.json()
-
-  if (!response.ok) {
-    const error = new Error(data.error?.message || 'Registration failed')
-    error.errorData = data.error || {}
-    error.status = response.status
-    throw error
-  }
-
-  return data
 }
 
 // Prepare data for API call
@@ -639,66 +537,33 @@ const prepareApiData = () => {
   }
 }
 
-// Handle standardized API errors (matching LoginModal pattern)
-const handleApiError = (error) => {
-  console.error('API Error:', error)
+// Handle API errors with new format support
+const handleRegisterApiError = (error) => {
+  console.error('Register API Error:', error)
   
-  const errorData = error.errorData || {}
-  const errorCode = errorData.code
-  const errorMessage = getErrorMessage(errorCode, errorData.message)
+  // Use centralized error handler and get error info
+  const errorInfo = error.errorInfo || handleApiError(error, error.response)
   
-  // Update API error display
-  apiError.value = {
-    ...errorData,
-    code: errorCode,
-    message: errorMessage
+  // Handle register-specific error details
+  if (errorInfo.code === 'USER_EXISTS' || errorInfo.code === 'CONFLICT_ERROR') {
+    // Mark email field with error if it's a duplicate email
+    if (errorInfo.details?.conflictType === 'DUPLICATE_EMAIL' || errorInfo.code === 'USER_EXISTS') {
+      setFieldError('email', 'Email này đã được sử dụng')
+    }
   }
-
-  // Handle specific error types
-  switch (errorCode) {
-    case 'USER_EXISTS':
-      errors.value.email = errorMessage
-      break
-      
-    case 'MISSING_FIELDS':
-      // Highlight missing fields
-      if (errorData.fields && Array.isArray(errorData.fields)) {
-        errorData.fields.forEach(field => {
-          if (validationRules[field]) {
-            const fieldName = {
-              email: 'Email',
-              password: 'Mật khẩu',
-              fullName: 'Họ và tên',
-              phone: 'Số điện thoại'
-            }[field] || field
-            errors.value[field] = `${fieldName} là bắt buộc`
-          }
-        })
-      }
-      break
-      
-    case 'INVALID_FORMAT':
-      if (errorData.field) {
-        errors.value[errorData.field] = errorMessage
-      }
-      break
-      
-    case 'PASSWORD_WEAK':
-      errors.value.password = errorMessage
-      break
-      
-    case 'VALIDATION_ERROR':
-      if (errorData.field) {
-        errors.value[errorData.field] = errorMessage
-      }
-      break
+  
+  // Handle password weak errors
+  if (errorInfo.code === 'PASSWORD_WEAK' || errorInfo.code === 'BUSINESS_LOGIC_ERROR') {
+    if (errorInfo.details?.businessRule === 'PASSWORD_POLICY') {
+      setFieldError('password', 'Mật khẩu không đáp ứng yêu cầu bảo mật')
+    }
   }
 }
 
 // Handle form submission
 const handleSubmit = async () => {
   // Clear previous errors
-  apiError.value = {}
+  clearAllErrors()
 
   // Validate form
   if (!validateForm()) {
@@ -717,7 +582,7 @@ const handleSubmit = async () => {
     // Check email availability before registration
     const emailExists = await checkEmailExists(form.value.email)
     if (emailExists) {
-      errors.value.email = 'Email này đã được sử dụng'
+      setFieldError('email', 'Email này đã được sử dụng')
       isLoading.value = false
       return
     }
@@ -742,7 +607,7 @@ const handleSubmit = async () => {
 
   } catch (error) {
     console.error('Registration error:', error)
-    handleApiError(error)
+    handleRegisterApiError(error)
   } finally {
     isLoading.value = false
   }
@@ -768,17 +633,7 @@ const resetForm = () => {
     agreeMarketing: false
   }
 
-  errors.value = {
-    fullName: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
-    dateOfBirth: '',
-    agreeTerms: ''
-  }
-
-  apiError.value = {}
+  clearAllErrors()
   showSuccess.value = false
   registeredUser.value = null
   successMessage.value = ''

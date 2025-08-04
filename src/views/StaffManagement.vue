@@ -124,9 +124,8 @@
         <!-- Desktop Table Header -->
         <div class="hidden lg:block bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
           <div class="grid grid-cols-12 gap-4 font-semibold text-gray-700 text-sm uppercase tracking-wide">
-            <div class="col-span-3">Thông tin cá nhân</div>
-            <div class="col-span-1">Chức vụ</div>
-            <div class="col-span-2">Liên hệ</div>
+            <div class="col-span-4">Thông tin cá nhân</div>
+            <div class="col-span-2">Chức vụ</div>
             <div class="col-span-2">Ngày tham gia</div>
             <div class="col-span-2">Lần đăng nhập cuối</div>
             <div class="col-span-1">Trạng thái</div>
@@ -140,12 +139,14 @@
           <div class="hidden lg:block divide-y divide-gray-100">
             <StaffCard 
               v-for="staff in staffList" 
-              :key="`desktop-${staff.id}`"
+              :key="`desktop-${staff.id}-${pagination.page}`"
               :staff="staff"
               :is-mobile="false"
+              :is-expanded="expandedRows.has(staff.id)"
               @edit="openEditModal"
               @toggle-status="handleToggleStatus"
               @delete="confirmDelete"
+              @toggle-expand="toggleRowExpansion"
             />
           </div>
 
@@ -153,7 +154,7 @@
           <div class="lg:hidden space-y-4 p-4">
             <StaffCard 
               v-for="staff in staffList" 
-              :key="`mobile-${staff.id}`"
+              :key="`mobile-${staff.id}-${pagination.page}`"
               :staff="staff"
               :is-mobile="true"
               @edit="openEditModal"
@@ -364,6 +365,9 @@ const error = ref('')
 // Form error handling
 const formError = ref('')
 const fieldErrors = ref([])
+
+// Expandable rows state
+const expandedRows = ref(new Set())
 
 // API Data
 const staffList = ref([])
@@ -604,6 +608,19 @@ async function fetchUsers() {
         joinDate: user.createdAt ? new Date(user.createdAt).toISOString().split('T')[0] : null
       }))
       
+      // Reset expanded rows when data changes to prevent ID conflicts
+      const currentStaffIds = new Set(staffList.value.map(staff => staff.id))
+      const validExpandedRows = new Set()
+      
+      // Only keep expanded rows that still exist in current data
+      expandedRows.value.forEach(id => {
+        if (currentStaffIds.has(id)) {
+          validExpandedRows.add(id)
+        }
+      })
+      
+      expandedRows.value = validExpandedRows
+      
       apiData.value = {
         pagination: data.data.pagination,
         filters: data.data.filters
@@ -649,9 +666,19 @@ watch(() => pagination.value.limit, () => {
 })
 
 // ===== METHODS =====
+function toggleRowExpansion(staffId) {
+  if (expandedRows.value.has(staffId)) {
+    expandedRows.value.delete(staffId)
+  } else {
+    expandedRows.value.add(staffId)
+  }
+}
+
 function changePage(page) {
   if (page >= 1 && page <= (apiData.value.pagination?.totalPages || 1)) {
     pagination.value.page = page
+    // Clear expanded rows when changing pages to prevent ID conflicts
+    expandedRows.value.clear()
     fetchUsers()
   }
 }
@@ -912,6 +939,8 @@ function clearFilters() {
     status: ''
   }
   pagination.value.page = 1
+  // Clear expanded rows when filters change
+  expandedRows.value.clear()
   fetchUsers()
 }
 

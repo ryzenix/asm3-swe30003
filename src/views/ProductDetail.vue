@@ -99,6 +99,8 @@
                     <span class="text-blue-600 font-medium">{{ product.brand }}</span>
                     <span class="text-gray-300">•</span>
                     <span>SKU: {{ product.sku }}</span>
+                    <span v-if="product.origin" class="text-gray-300">•</span>
+                    <span v-if="product.origin">Xuất xứ: {{ product.origin }}</span>
                 </div>
 
                 <h1 class="text-2xl font-bold text-gray-900 leading-tight mb-4">
@@ -365,7 +367,7 @@ export default {
                         category: apiProduct.category,
                         subcategory: apiProduct.subcategory,
                         packaging: apiProduct.unit,
-                        origin: 'Việt Nam', // Default value
+                        origin: apiProduct.origin || 'Việt Nam', // Use API value or default
                         manufacturer: apiProduct.manufacturer,
                         promotion: null, // API doesn't provide this
                         stockQuantity: apiProduct.stockQuantity,

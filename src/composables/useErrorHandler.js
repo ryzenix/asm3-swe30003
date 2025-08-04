@@ -66,6 +66,7 @@ export function useErrorHandler() {
 
   // Set field error
   const setFieldError = (fieldName, message) => {
+    console.log("setFieldError", fieldName, message)
     errors.value[fieldName] = message;
   };
 
@@ -456,6 +457,175 @@ export function useErrorHandler() {
     return '';
   };
 
+  // Product-specific validation functions
+  const validateProductTitle = (title) => {
+    if (!title || !title.trim()) {
+      return 'Tên sản phẩm là bắt buộc';
+    }
+    
+    if (title.trim().length < 2) {
+      return 'Tên sản phẩm phải có ít nhất 2 ký tự';
+    }
+    
+    if (title.trim().length > 255) {
+      return 'Tên sản phẩm không được vượt quá 255 ký tự';
+    }
+    
+    return '';
+  };
+
+  const validateProductSKU = (sku) => {
+    // SKU is optional - can be auto-generated
+    if (!sku || !sku.trim()) {
+      return '';
+    }
+    
+    if (sku.trim().length < 3) {
+      return 'Mã SKU phải có ít nhất 3 ký tự';
+    }
+    
+    if (sku.trim().length > 50) {
+      return 'Mã SKU không được vượt quá 50 ký tự';
+    }
+    
+    // SKU should only contain alphanumeric characters and hyphens
+    if (!/^[A-Za-z0-9\-]+$/.test(sku.trim())) {
+      return 'Mã SKU chỉ được chứa chữ cái, số và dấu gạch ngang';
+    }
+    
+    return '';
+  };
+
+  const validateProductCategory = (category) => {
+    // Handle both string (legacy) and number (new ID system) categories
+    if (!category) {
+      return 'Danh mục là bắt buộc';
+    }
+    
+    // If it's a string, check if it's empty after trimming
+    if (typeof category === 'string' && !category.trim()) {
+      return 'Danh mục là bắt buộc';
+    }
+    
+    // If it's a number, check if it's valid (greater than 0)
+    if (typeof category === 'number' && category <= 0) {
+      return 'Danh mục không hợp lệ';
+    }
+    
+    return '';
+  };
+
+  const validateProductManufacturer = (manufacturer) => {
+    if (!manufacturer || !manufacturer.trim()) {
+      return 'Nhà sản xuất là bắt buộc';
+    }
+    
+    if (manufacturer.trim().length < 2) {
+      return 'Tên nhà sản xuất phải có ít nhất 2 ký tự';
+    }
+    
+    if (manufacturer.trim().length > 255) {
+      return 'Tên nhà sản xuất không được vượt quá 255 ký tự';
+    }
+    
+    return '';
+  };
+
+  const validateProductUnit = (unit) => {
+    if (!unit || !unit.trim()) {
+      return 'Đơn vị là bắt buộc';
+    }
+    
+    if (unit.trim().length < 1) {
+      return 'Đơn vị phải có ít nhất 1 ký tự';
+    }
+    
+    if (unit.trim().length > 50) {
+      return 'Đơn vị không được vượt quá 50 ký tự';
+    }
+    
+    return '';
+  };
+
+  const validateProductPrice = (priceValue) => {
+    if (!priceValue && priceValue !== 0) {
+      return 'Giá sản phẩm là bắt buộc';
+    }
+    
+    const price = parseFloat(priceValue);
+    
+    if (isNaN(price)) {
+      return 'Giá sản phẩm phải là một số';
+    }
+    
+    if (price < 0) {
+      return 'Giá sản phẩm phải lớn hơn hoặc bằng 0';
+    }
+    
+    if (price > 999999999) {
+      return 'Giá sản phẩm không được vượt quá 999,999,999';
+    }
+    
+    return '';
+  };
+
+  const validateProductStock = (stockQuantity) => {
+    if (stockQuantity === undefined || stockQuantity === null || stockQuantity === '') {
+      return ''; // Stock quantity is optional
+    }
+    
+    const stock = parseInt(stockQuantity);
+    
+    if (isNaN(stock)) {
+      return 'Số lượng tồn kho phải là một số nguyên';
+    }
+    
+    if (stock < 0) {
+      return 'Số lượng tồn kho phải lớn hơn hoặc bằng 0';
+    }
+    
+    if (stock > 999999) {
+      return 'Số lượng tồn kho không được vượt quá 999,999';
+    }
+    
+    return '';
+  };
+
+  const validateProductStatus = (status) => {
+    const validStatuses = ['active', 'inactive', 'out_of_stock'];
+    
+    if (!status) {
+      return ''; // Status is optional, defaults to 'active'
+    }
+    
+    if (!validStatuses.includes(status)) {
+      return `Trạng thái phải là một trong: ${validStatuses.join(', ')}`;
+    }
+    
+    return '';
+  };
+
+  const validateProductExpiryDate = (expiryDate) => {
+    if (!expiryDate) {
+      return ''; // Expiry date is optional
+    }
+    
+    const date = new Date(expiryDate);
+    
+    if (isNaN(date.getTime())) {
+      return 'Ngày hết hạn không hợp lệ';
+    }
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (date < today) {
+      return 'Ngày hết hạn không được là ngày trong quá khứ';
+    }
+    
+    return '';
+  };
+
   // Validate field and set error if invalid
   const validateField = (fieldName, value, extraParam = null) => {
     let errorMessage = '';
@@ -481,6 +651,34 @@ export function useErrorHandler() {
         break;
       case 'agreeTerms':
         errorMessage = validateAgreeTerms(value);
+        break;
+      // Product validation fields
+      case 'title':
+        errorMessage = validateProductTitle(value);
+        break;
+      case 'sku':
+        errorMessage = validateProductSKU(value);
+        break;
+      case 'category':
+        errorMessage = validateProductCategory(value);
+        break;
+      case 'manufacturer':
+        errorMessage = validateProductManufacturer(value);
+        break;
+      case 'unit':
+        errorMessage = validateProductUnit(value);
+        break;
+      case 'priceValue':
+        errorMessage = validateProductPrice(value);
+        break;
+      case 'stockQuantity':
+        errorMessage = validateProductStock(value);
+        break;
+      case 'status':
+        errorMessage = validateProductStatus(value);
+        break;
+      case 'expiryDate':
+        errorMessage = validateProductExpiryDate(value);
         break;
       default:
         return true;
@@ -528,6 +726,16 @@ export function useErrorHandler() {
     validatePhone,
     validateDateOfBirth,
     validateConfirmPassword,
-    validateAgreeTerms
+    validateAgreeTerms,
+    // Product validators
+    validateProductTitle,
+    validateProductSKU,
+    validateProductCategory,
+    validateProductManufacturer,
+    validateProductUnit,
+    validateProductPrice,
+    validateProductStock,
+    validateProductStatus,
+    validateProductExpiryDate
   };
 }

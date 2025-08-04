@@ -1,17 +1,15 @@
 <template>
-    <div class="bg-white rounded-xl shadow-sm p-4 pt-6 flex flex-col justify-between border border-gray-100 transition-all duration-300 hover:shadow-xl hover:scale-105 hover:border-blue-200 relative group overflow-visible">
-        <!-- Animated Background Gradient -->
-        <div class="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-xl"></div>
+    <div class="bg-white rounded-xl shadow-sm p-4 pt-6 h-full flex flex-col border border-gray-200 hover:shadow-md transition-shadow relative group">
         <!-- Discount Badge -->
-        <div v-if="product.discount" class="absolute -top-2 -left-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs px-3 py-1 rounded-full z-20 shadow-md animate-bounce-slow">
-            <i class="fas fa-bolt mr-1"></i> -{{ product.discount }}%
+        <div v-if="product.discount" class="absolute -top-2 -left-2 bg-red-600 text-white text-xs px-3 py-1 rounded-full z-20 shadow-sm">
+            <i class="fas fa-tag mr-1"></i> -{{ product.discount }}%
         </div>
         <!-- Out of Stock Badge -->
-        <div v-if="product.stockQuantity === 0" class="absolute -top-2 -left-2 bg-gradient-to-r from-red-600 to-red-700 text-white text-xs px-3 py-1 rounded-full z-20 shadow-md">
+        <div v-if="product.stockQuantity === 0" class="absolute -top-2 -left-2 bg-gray-600 text-white text-xs px-3 py-1 rounded-full z-20 shadow-sm">
             <i class="fas fa-exclamation-triangle mr-1"></i> Hết hàng
         </div>
         <!-- Wishlist Button -->
-        <button class="absolute top-2 right-2 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-red-50 hover:text-red-500 transform hover:scale-110" @click.stop="toggleWishlist">
+        <button class="absolute top-3 right-3 w-8 h-8 bg-white rounded-full shadow-sm flex items-center justify-center z-10 border border-gray-200 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors" @click.stop="toggleWishlist">
               <i :class="[
                 'fas text-sm transition-colors duration-200',
                 isInWishlist ? 'fa-heart text-red-500' : 'fa-heart text-gray-400'
@@ -31,9 +29,9 @@
       </button>
         </div>
         <!-- Content -->
-        <div class="flex-1 relative z-10">
+        <div class="flex-1 flex flex-col relative z-10">
             <!-- Title -->
-            <h3 class="text-sm text-gray-800 font-medium mb-2 line-clamp-2 group-hover:text-blue-800 transition-colors duration-200">
+            <h3 class="text-sm text-gray-800 font-medium mb-2 line-clamp-2">
                 {{ product.title }}
             </h3>
             <!-- Price Container -->
@@ -59,7 +57,7 @@
                   </span>
             </div>
             <!-- Rating (mock) -->
-            <div class="flex items-center mb-3 text-xs">
+            <div class="flex items-center mb-4 text-xs">
                 <div class="flex text-yellow-400 mr-2">
                     <i class="fas fa-star"></i>
                     <i class="fas fa-star"></i>
@@ -69,44 +67,32 @@
                 </div>
                 <span class="text-gray-500">(4.5)</span>
             </div>
+            
+            <!-- Spacer to push buttons to bottom -->
+            <div class="flex-1"></div>
+            
             <!-- Action Buttons -->
-            <div class="space-y-2 relative z-10">
-                <!-- Add to Cart Button -->
-                <button 
-                  @click="handleAddToCart" 
-                  :disabled="isAddingToCart || product.stockQuantity === 0" 
-                  :class="[
-                    'w-full text-sm py-3 rounded-lg transition-all duration-200 font-semibold transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center',
-                    product.stockQuantity === 0 
-                      ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
-                  ]"
-                >
-                  <i v-if="isAddingToCart" class="fas fa-spinner fa-spin mr-2"></i>
-                  <i v-else-if="product.stockQuantity === 0" class="fas fa-times mr-2"></i>
-                  <i v-else class="fas fa-cart-plus mr-2"></i>
-                  {{ isAddingToCart ? 'Đang thêm...' : (product.stockQuantity === 0 ? 'Hết hàng' : 'Chọn mua') }}
-                </button>
+            <div class="space-y-2 relative z-10 mt-auto">
+                <!-- Cart Button with Animation -->
+                <CartButton 
+                  :product="product"
+                  @added-to-cart="handleAddedToCart"
+                  @quantity-changed="handleQuantityChanged"
+                />
                 <!-- Secondary Actions -->
                 <div class="flex gap-2">
-                    <button @click="addToCompare" class="flex-1 bg-gray-100 text-gray-700 text-xs py-2 rounded-lg hover:bg-gray-200 transition-all duration-200 flex items-center justify-center transform hover:scale-105 active:scale-95">
+                    <button @click="addToCompare" class="flex-1 bg-gray-100 text-gray-700 text-xs py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center">
                     <i class="fas fa-balance-scale mr-1"></i>
                     So sánh
                   </button>
-                    <button @click="shareProduct" class="flex-1 bg-gray-100 text-gray-700 text-xs py-2 rounded-lg hover:bg-gray-200 transition-all duration-200 flex items-center justify-center transform hover:scale-105 active:scale-95">
+                    <button @click="shareProduct" class="flex-1 bg-gray-100 text-gray-700 text-xs py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center">
                     <i class="fas fa-share-alt mr-1"></i>
                     Chia sẻ
                   </button>
                 </div>
             </div>
         </div>
-        <!-- Loading Overlay -->
-        <div v-if="isAddingToCart" class="absolute inset-0 bg-white bg-opacity-80 flex items-center justify-center rounded-xl z-40">
-            <div class="flex flex-col items-center">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <span class="text-sm text-gray-600 mt-2">Đang xử lý...</span>
-            </div>
-        </div>
+
     </div>
 </template>
 
@@ -115,6 +101,7 @@
         ref,
         computed
     } from 'vue'
+    import CartButton from '../Common/CartButton.vue'
     const props = defineProps({
         product: {
             type: Object,
@@ -122,7 +109,6 @@
         }
     })
     const emit = defineEmits(['add-to-cart', 'add-to-wishlist', 'quick-view', 'add-to-compare', 'share'])
-    const isAddingToCart = ref(false)
     const isInWishlist = ref(false)
     const calculateOriginalPrice = () => {
         if (props.product.discount) {
@@ -139,15 +125,13 @@
         }
         return '0đ'
     }
-    const handleAddToCart = async() => {
-        if (isAddingToCart.value) return
-        isAddingToCart.value = true
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        isAddingToCart.value = false
-        emit('add-to-cart', props.product)
-        // Show success feedback
+    const handleAddedToCart = (product) => {
+        emit('add-to-cart', product)
         showSuccessMessage()
+    }
+    
+    const handleQuantityChanged = (data) => {
+        console.log('Quantity changed in product card:', data)
     }
     const toggleWishlist = () => {
         isInWishlist.value = !isInWishlist.value
@@ -183,23 +167,5 @@
         line-clamp: 2;
         -webkit-box-orient: vertical;
     }
-    @keyframes bounce-slow {
-        0%,
-        20%,
-        53%,
-        80%,
-        100% {
-            transform: translate3d(0, 0, 0);
-        }
-        40%,
-        43% {
-            transform: translate3d(0, -2px, 0);
-        }
-        70% {
-            transform: translate3d(0, -1px, 0);
-        }
-    }
-    .animate-bounce-slow {
-        animation: bounce-slow 2s infinite;
-    }
+
 </style>

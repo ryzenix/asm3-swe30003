@@ -1,5 +1,6 @@
 <template>
-  <div class="bg-white rounded-xl shadow-xl p-6 relative min-w-80">
+  <!-- Desktop Dropdown (hidden on mobile) -->
+  <div v-if="!isMobile" class="bg-white rounded-xl shadow-xl p-6 relative min-w-80">
     <!-- ❌ Close Button -->
     <button
       @click="$emit('close')"
@@ -55,8 +56,9 @@
     <!-- Menu Options -->
     <div class="space-y-2 mb-6">
       <!-- My Orders -->
-      <button
-        @click="handleViewOrders"
+      <router-link
+        to="/my-orders"
+        @click="$emit('close')"
         class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition-all text-left"
       >
         <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -69,7 +71,7 @@
         <svg class="w-4 h-4 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>
-      </button>
+      </router-link>
 
       <!-- Edit Profile -->
       <button
@@ -178,10 +180,197 @@
       <span>Đăng xuất</span>
     </button>
   </div>
+
+  <!-- Mobile Modal (shown on mobile) -->
+  <Teleport to="body">
+    <Transition name="modal">
+      <div v-if="isMobile" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" @click="$emit('close')">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-hidden transform transition-all duration-300 relative" @click.stop>
+          <!-- Mobile Modal Header -->
+          <div class="bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                  <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="text-lg font-semibold">{{ user.name }}</h2>
+                  <p class="text-green-100 text-sm">{{ roleDetails[user.role].label }}</p>
+                </div>
+              </div>
+              <button
+                @click="$emit('close')"
+                class="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors duration-200"
+              >
+                <i class="fas fa-times text-lg"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Mobile Modal Body -->
+          <div class="p-6 max-h-[70vh] overflow-y-auto">
+            <!-- User Details -->
+            <div class="space-y-3 text-sm bg-gray-50 rounded-lg p-4 mb-6">
+              <div class="flex items-center gap-3">
+                <svg class="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <span class="text-gray-600 break-all">{{ user.email }}</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <svg class="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+                <span class="text-gray-600">{{ user.phone }}</span>
+              </div>
+              <div v-if="user.gender" class="flex items-center gap-3">
+                <svg class="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span class="text-gray-600">{{ getGenderText(user.gender) }}</span>
+              </div>
+              <div v-if="user.dateOfBirth" class="flex items-center gap-3">
+                <svg class="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span class="text-gray-600">{{ formatDate(user.dateOfBirth) }}</span>
+              </div>
+            </div>
+
+            <!-- Menu Options -->
+            <div class="space-y-2 mb-6">
+              <!-- My Orders -->
+              <router-link
+                to="/my-orders"
+                @click="$emit('close')"
+                class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition-all text-left"
+              >
+                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+                <div>
+                  <div class="font-medium text-gray-800">Đơn hàng của tôi</div>
+                  <div class="text-xs text-gray-500">Xem lịch sử mua hàng</div>
+                </div>
+                <svg class="w-4 h-4 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </router-link>
+
+              <!-- Edit Profile -->
+              <button
+                @click="handleEditProfile"
+                class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition-all text-left"
+              >
+                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <div>
+                  <div class="font-medium text-gray-800">Chỉnh sửa thông tin</div>
+                  <div class="text-xs text-gray-500">Cập nhật thông tin cá nhân</div>
+                </div>
+                <svg class="w-4 h-4 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+
+              <!-- Address Book -->
+              <button
+                @click="handleAddressBook"
+                class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition-all text-left"
+              >
+                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <div>
+                  <div class="font-medium text-gray-800">Sổ địa chỉ</div>
+                  <div class="text-xs text-gray-500">Quản lý địa chỉ giao hàng</div>
+                </div>
+                <svg class="w-4 h-4 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+
+              <!-- Favorites -->
+              <button
+                @click="handleFavorites"
+                class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition-all text-left"
+              >
+                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+                <div>
+                  <div class="font-medium text-gray-800">Sản phẩm yêu thích</div>
+                  <div class="text-xs text-gray-500">Danh sách sản phẩm đã lưu</div>
+                </div>
+                <svg class="w-4 h-4 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+
+              <!-- User Management (Only for superuser) -->
+              <router-link
+                v-if="user.role === 'superuser'"
+                to="/staff"
+                @click="$emit('close')"
+                class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition-all text-left"
+              >
+                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <div>
+                  <div class="font-medium text-gray-800">Quản lý tài khoản</div>
+                  <div class="text-xs text-gray-500">Quản lý người dùng hệ thống</div>
+                </div>
+                <svg class="w-4 h-4 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </router-link>
+
+              <!-- Product Management (Only for superuser) -->
+              <router-link
+                v-if="user.role === 'superuser'"
+                to="/admin/products"
+                @click="$emit('close')"
+                class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition-all text-left"
+              >
+                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+                <div>
+                  <div class="font-medium text-gray-800">Quản lý sản phẩm</div>
+                  <div class="text-xs text-gray-500">Tạo, chỉnh sửa và quản lý sản phẩm</div>
+                </div>
+                <svg class="w-4 h-4 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </router-link>
+            </div>
+
+            <hr class="border-gray-200 mb-4">
+
+            <!-- Logout Button -->
+            <button
+              @click="handleLogout"
+              class="w-full flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 font-medium py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span>Đăng xuất</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup>
-// import { ref } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 const roleDetails = {
   client: {
@@ -205,8 +394,26 @@ const props = defineProps({
   }
 })
 
-// Define emits (removed 'user-management' since we're using router-link now)
-const emit = defineEmits(['close', 'logout', 'view-orders', 'edit-profile', 'address-book', 'favorites']);
+// Mobile detection
+const windowWidth = ref(window.innerWidth)
+
+const isMobile = computed(() => windowWidth.value < 768) // md breakpoint
+
+// Update window width on resize
+const updateWindowWidth = () => {
+  windowWidth.value = window.innerWidth
+}
+
+onMounted(() => {
+  window.addEventListener('resize', updateWindowWidth)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateWindowWidth)
+})
+
+// Define emits (removed 'view-orders' since we're using router-link now)
+const emit = defineEmits(['close', 'logout', 'edit-profile', 'address-book', 'favorites']);
 
 // Event handlers
 const handleLogout = () => {
@@ -215,11 +422,7 @@ const handleLogout = () => {
   emit('logout')
 }
 
-const handleViewOrders = () => {
-  // Emit view orders event and close modal
-  emit('view-orders')
-  emit('close')
-}
+
 
 const handleEditProfile = () => {
   // Emit edit profile event and close modal
@@ -269,5 +472,44 @@ const formatDate = (dateString) => {
 </script>
 
 <style scoped>
-/* Add any custom styles if needed */
+/* Modal transition styles */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-active .bg-white,
+.modal-leave-active .bg-white {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.modal-enter-from .bg-white,
+.modal-leave-to .bg-white {
+  transform: scale(0.95);
+  opacity: 0;
+}
+
+/* Custom scrollbar for modal body */
+.max-h-\[70vh\]::-webkit-scrollbar {
+  width: 6px;
+}
+
+.max-h-\[70vh\]::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.max-h-\[70vh\]::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.max-h-\[70vh\]::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
 </style>

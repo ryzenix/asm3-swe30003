@@ -52,12 +52,11 @@
           <div class="relative">
             <select 
               v-model="categoryFilter"
-              @change="fetchProducts"
               class="w-full px-4 py-3.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none cursor-pointer"
             >
               <option value="">Tất cả danh mục</option>
-              <option v-for="category in mainCategories" :key="category" :value="category">
-                {{ category }}
+              <option v-for="category in mainCategoryOptions" :key="category.value" :value="category.value">
+                {{ category.label }}
               </option>
             </select>
             <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -69,12 +68,12 @@
           <div class="relative">
             <select 
               v-model="statusFilter"
-              @change="fetchProducts"
               class="w-full px-4 py-3.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none cursor-pointer"
             >
               <option value="">Tất cả trạng thái</option>
               <option value="active">Đang bán</option>
               <option value="inactive">Tạm ngưng</option>
+              <option value="out_of_stock">Hết hàng</option>
             </select>
             <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
               <i class="fas fa-chevron-down text-gray-400 text-sm"></i>
@@ -142,8 +141,7 @@
                 class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
             </div>
-            <div class="col-span-3">Sản phẩm</div>
-            <div class="col-span-1">Mã SP</div>
+            <div class="col-span-4">Sản phẩm</div>
             <div class="col-span-2">Danh mục</div>
             <div class="col-span-2">Giá</div>
             <div class="col-span-1">Tồn kho</div>
@@ -155,106 +153,197 @@
         <!-- Products List Content -->
         <div v-if="filteredProducts.length > 0">
           <!-- Desktop Table Rows -->
-          <div class="hidden lg:block divide-y divide-gray-100">
+          <div class="hidden lg:block divide-y divide-gray-50">
             <div 
               v-for="product in filteredProducts" 
               :key="`desktop-${product.id}`"
-              class="px-6 py-4 hover:bg-gray-50 transition-colors duration-200"
+              class="group hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:shadow-sm hover:border-l-4 hover:border-blue-400 transition-all duration-300"
             >
-              <div class="grid grid-cols-12 gap-4 items-center">
-                <div class="col-span-1">
-                  <input 
-                    type="checkbox" 
-                    v-model="selectedProducts"
-                    :value="product.id"
-                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                </div>
-                <div class="col-span-3">
-                  <div class="flex items-center">
-                    <img 
-                      :src="getProductImage(product)" 
-                      :alt="product.title"
-                      class="w-12 h-12 rounded-lg object-cover border border-gray-200"
-                      @error="handleImageError"
-                    />
-                    <div class="ml-4">
-                      <div class="text-sm font-medium text-gray-900">{{ product.title }}</div>
-                      <div class="text-sm text-gray-500">{{ product.manufacturer }}</div>
+              <!-- Main Row -->
+              <div class="px-6 py-5 cursor-pointer" @click="toggleRowExpansion(product.id)">
+                <div class="grid grid-cols-12 gap-6 items-center">
+                  <!-- Checkbox -->
+                  <div class="col-span-1">
+                    <div class="flex items-center space-x-2">
+                      <input 
+                        type="checkbox" 
+                        v-model="selectedProducts"
+                        :value="product.id"
+                        class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2 transition-all duration-200"
+                        @click.stop
+                      />
+                      <button 
+                        @click.stop="toggleRowExpansion(product.id)"
+                        class="p-1 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                        :title="expandedRows.has(product.id) ? 'Thu gọn' : 'Mở rộng'"
+                      >
+                        <i :class="[
+                          'fas text-xs transition-transform duration-200',
+                          expandedRows.has(product.id) ? 'fa-chevron-down rotate-180' : 'fa-chevron-down'
+                        ]"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <!-- Product Info -->
+                  <div class="col-span-4">
+                    <div class="flex items-center space-x-4">
+                      <div class="relative flex-shrink-0">
+                        <img 
+                          :src="getProductImage(product)" 
+                          :alt="product.title"
+                          class="w-14 h-14 rounded-xl object-cover border-2 border-gray-200 shadow-sm hover:shadow-md hover:scale-105 transition-all duration-300 bg-gray-100"
+                          @error="handleImageError"
+                          loading="lazy"
+                        />
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center space-x-2">
+                          <h3 class="text-sm font-semibold text-gray-900 truncate group-hover:text-blue-900 transition-colors duration-200">
+                            {{ product.title }}
+                          </h3>
+                          <div v-if="product.stockQuantity === 0" class="flex-shrink-0">
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              <i class="fas fa-exclamation-triangle mr-1"></i>
+                              Hết hàng
+                            </span>
+                          </div>
+                        </div>
+                        <p class="text-sm text-gray-600 truncate">
+                          <i class="fas fa-industry mr-1 text-gray-400"></i>
+                          {{ product.manufacturer }}
+                        </p>
+                        <p v-if="product.origin" class="text-xs text-gray-500 truncate">
+                          <i class="fas fa-globe mr-1 text-gray-400"></i>
+                          {{ product.origin }}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Category -->
+                  <div class="col-span-2">
+                    <div class="space-y-1">
+                      <span class="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border border-blue-200">
+                        <i class="fas fa-tag mr-1"></i>
+                        {{ getCategoryDisplayName(product.category) }}
+                      </span>
+                      <div v-if="product.subcategory" class="text-xs text-gray-600 ml-1">
+                        <i class="fas fa-arrow-right mr-1 text-gray-400"></i>
+                        {{ getSubcategoryDisplayName(product.subcategory) }}
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Price -->
+                  <div class="col-span-2">
+                    <div class="space-y-1">
+                      <div class="flex items-center space-x-2">
+                        <span class="text-sm font-bold text-gray-900">
+                          {{ formatPrice(product.priceValue || product.price) }}
+                        </span>
+                        <i class="fas fa-coins text-yellow-500"></i>
+                      </div>
+                      <div v-if="product.discount" class="flex items-center space-x-1">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          <i class="fas fa-percentage mr-1"></i>
+                          -{{ product.discount }}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Stock -->
+                  <div class="col-span-1">
+                    <div class="flex items-center space-x-2">
+                      <div class="flex items-center space-x-1">
+                        <i class="fas fa-boxes text-gray-400"></i>
+                        <span :class="[
+                          'text-sm font-semibold',
+                          product.stockQuantity > 50 ? 'text-green-600' : 
+                          product.stockQuantity > 10 ? 'text-yellow-600' : 'text-red-600'
+                        ]">
+                          {{ product.stockQuantity || 0 }}
+                        </span>
+                      </div>
+                      <div :class="[
+                        'w-2 h-2 rounded-full',
+                        product.stockQuantity > 50 ? 'bg-green-400' : 
+                        product.stockQuantity > 10 ? 'bg-yellow-400' : 'bg-red-400'
+                      ]"></div>
+                    </div>
+                  </div>
+                  <!-- Status -->
+                  <div class="col-span-1">
+                    <div class="flex flex-col items-start space-y-1">
+                      <span :class="[
+                        'inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full border',
+                        product.status === 'active' ? 'bg-green-50 text-green-800 border-green-200' : '',
+                        product.status === 'inactive' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' : '',
+                        product.status === 'out_of_stock' ? 'bg-red-50 text-red-800 border-red-200' : ''
+                      ]">
+                        <div :class="[
+                          'w-1.5 h-1.5 rounded-full mr-1.5',
+                          product.status === 'active' ? 'bg-green-400' : '',
+                          product.status === 'inactive' ? 'bg-yellow-400' : '',
+                          product.status === 'out_of_stock' ? 'bg-red-400' : ''
+                        ]"></div>
+                        {{ getStatusText(product.status) }}
+                      </span>
+                    </div>
+                  </div>
+                  <!-- Actions -->
+                  <div class="col-span-1">
+                    <div class="flex items-center justify-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <div class="flex items-center bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                        <button 
+                          @click.stop="editProduct(product)"
+                          class="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 border-r border-gray-200"
+                          title="Chỉnh sửa sản phẩm"
+                        >
+                          <i class="fas fa-edit text-sm"></i>
+                        </button>
+                        <button 
+                          @click.stop="toggleProductStatus(product)"
+                          :class="[
+                            'p-2 transition-all duration-200 border-r border-gray-200',
+                            product.status === 'active' 
+                              ? 'text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50' 
+                              : 'text-green-600 hover:text-green-700 hover:bg-green-50'
+                          ]"
+                          :title="product.status === 'active' ? 'Tạm ngưng sản phẩm' : 'Kích hoạt sản phẩm'"
+                        >
+                          <i :class="[
+                            'text-sm',
+                            product.status === 'active' ? 'fas fa-pause' : 'fas fa-play'
+                          ]"></i>
+                        </button>
+                        <button 
+                          @click.stop="openDeleteModal(product)"
+                          class="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200"
+                          title="Xóa sản phẩm"
+                        >
+                          <i class="fas fa-trash text-sm"></i>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div class="col-span-1">
-                  <div class="text-sm font-medium text-gray-900">{{ product.sku || 'N/A' }}</div>
-                </div>
-                <div class="col-span-2">
-                  <div class="space-y-1">
-                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                      {{ product.category }}
-                    </span>
-                    <div v-if="product.subcategory" class="text-xs text-gray-600">
-                      {{ product.subcategory }}
-                    </div>
+              </div>
+
+              <!-- Expanded Row Content -->
+              <div v-if="expandedRows.has(product.id)" class="px-6 pb-4 bg-gray-50 border-t border-gray-100">
+                <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
+                  <!-- Product ID -->
+                  <div class="flex justify-between items-center">
+                    <span class="text-sm text-gray-600">ID sản phẩm:</span>
+                    <span class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">#{{ String(product.id).padStart(4, '0') }}</span>
                   </div>
-                </div>
-                <div class="col-span-2">
-                  <div class="text-sm font-medium text-gray-900">
-                    {{ formatPrice(product.priceValue || product.price) }}
+                  <!-- SKU -->
+                  <div class="flex justify-between items-center">
+                    <span class="text-sm text-gray-600">Mã SKU:</span>
+                    <span class="text-sm font-mono bg-blue-100 px-2 py-1 rounded text-blue-800">{{ product.sku || 'N/A' }}</span>
                   </div>
-                  <div v-if="product.discount" class="text-xs text-red-600">
-                    Giảm {{ product.discount }}%
-                  </div>
-                </div>
-                <div class="col-span-1">
-                  <div class="text-sm font-medium text-gray-900">
-                    <span :class="[
-                      product.stockQuantity > 50 ? 'text-green-600' : 
-                      product.stockQuantity > 10 ? 'text-yellow-600' : 'text-red-600'
-                    ]">
-                      {{ product.stockQuantity || 0 }}
-                    </span>
-                  </div>
-                </div>
-                <div class="col-span-1">
-                  <div class="space-y-1">
-                    <span :class="[
-                      'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
-                      product.status === 'active' ? 'bg-green-100 text-green-800' : '',
-                      product.status === 'inactive' ? 'bg-yellow-100 text-yellow-800' : ''
-                    ]">
-                      {{ getStatusText(product.status) }}
-                    </span>
-                    <div v-if="product.stockQuantity === 0" class="text-xs text-red-600 font-medium">
-                      ⚠️ Hết hàng
-                    </div>
-                  </div>
-                </div>
-                <div class="col-span-1 text-center">
-                  <div class="flex gap-2 justify-center">
-                    <button 
-                      @click="editProduct(product)"
-                      class="text-blue-600 hover:text-blue-900 transition-colors duration-200"
-                      title="Chỉnh sửa"
-                    >
-                      <i class="fas fa-edit"></i>
-                    </button>
-                    <button 
-                      @click="openDeleteModal(product)"
-                      class="text-red-600 hover:text-red-900 transition-colors duration-200"
-                      title="Xóa"
-                    >
-                      <i class="fas fa-trash"></i>
-                    </button>
-                    <button 
-                      @click="toggleProductStatus(product)"
-                      :class="[
-                        'transition-colors duration-200',
-                        product.status === 'active' ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900'
-                      ]"
-                      :title="product.status === 'active' ? 'Tạm ngưng' : 'Kích hoạt'"
-                    >
-                      <i :class="product.status === 'active' ? 'fas fa-pause' : 'fas fa-play'"></i>
-                    </button>
+                  <!-- Created Date -->
+                  <div class="flex justify-between items-center">
+                    <span class="text-sm text-gray-600">Ngày tạo:</span>
+                    <span class="text-sm text-gray-800">{{ formatDate(product.createdAt) }}</span>
                   </div>
                 </div>
               </div>
@@ -266,93 +355,149 @@
             <div 
               v-for="product in filteredProducts" 
               :key="`mobile-${product.id}`"
-              class="bg-white border border-gray-200 rounded-xl p-4 space-y-3"
+              class="bg-white border border-gray-200 rounded-2xl p-5 space-y-4 shadow-sm hover:shadow-md transition-all duration-300 hover:border-blue-300"
             >
+              <!-- Header with image, checkbox and actions -->
               <div class="flex items-start justify-between">
-                <div class="flex items-center space-x-3">
+                <div class="flex items-center space-x-4">
                   <input 
                     type="checkbox" 
                     v-model="selectedProducts"
                     :value="product.id"
-                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2 transition-all duration-200"
                   />
-                  <img 
-                    :src="getProductImage(product)" 
-                    :alt="product.title"
-                    class="w-16 h-16 rounded-lg object-cover border border-gray-200"
-                    @error="handleImageError"
-                  />
+                  <div class="relative">
+                    <img 
+                      :src="getProductImage(product)" 
+                      :alt="product.title"
+                      class="w-20 h-20 rounded-xl object-cover border-2 border-gray-200 shadow-sm bg-gray-100"
+                      @error="handleImageError"
+                      loading="lazy"
+                    />
+                    <div v-if="product.stockQuantity === 0" class="absolute -top-2 -right-2">
+                      <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                        Hết hàng
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex items-center bg-gray-50 rounded-lg p-1 space-x-1">
                   <button 
                     @click="editProduct(product)"
-                    class="text-blue-600 hover:text-blue-900 transition-colors duration-200"
-                    title="Chỉnh sửa"
+                    class="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded-md transition-all duration-200"
+                    title="Chỉnh sửa sản phẩm"
                   >
-                    <i class="fas fa-edit"></i>
-                  </button>
-                  <button 
-                    @click="openDeleteModal(product)"
-                    class="text-red-600 hover:text-red-900 transition-colors duration-200"
-                    title="Xóa"
-                  >
-                    <i class="fas fa-trash"></i>
+                    <i class="fas fa-edit text-sm"></i>
                   </button>
                   <button 
                     @click="toggleProductStatus(product)"
                     :class="[
-                      'transition-colors duration-200',
-                      product.status === 'active' ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900'
+                      'p-2 rounded-md transition-all duration-200',
+                      product.status === 'active' 
+                        ? 'text-yellow-600 hover:text-yellow-700 hover:bg-yellow-100' 
+                        : 'text-green-600 hover:text-green-700 hover:bg-green-100'
                     ]"
-                    :title="product.status === 'active' ? 'Tạm ngưng' : 'Kích hoạt'"
+                    :title="product.status === 'active' ? 'Tạm ngưng sản phẩm' : 'Kích hoạt sản phẩm'"
                   >
-                    <i :class="product.status === 'active' ? 'fas fa-pause' : 'fas fa-play'"></i>
+                    <i :class="[
+                      'text-sm',
+                      product.status === 'active' ? 'fas fa-pause' : 'fas fa-play'
+                    ]"></i>
+                  </button>
+                  <button 
+                    @click="openDeleteModal(product)"
+                    class="p-2 text-red-600 hover:text-red-700 hover:bg-red-100 rounded-md transition-all duration-200"
+                    title="Xóa sản phẩm"
+                  >
+                    <i class="fas fa-trash text-sm"></i>
                   </button>
                 </div>
               </div>
               
-              <div class="space-y-2">
-                <div>
-                  <h3 class="font-medium text-gray-900">{{ product.title }}</h3>
-                  <p class="text-sm text-gray-500">{{ product.manufacturer }}</p>
+              <!-- Product Info -->
+              <div class="space-y-3">
+                <div class="space-y-2">
+                  <h3 class="text-lg font-semibold text-gray-900 leading-tight">{{ product.title }}</h3>
+                  <div class="flex items-center space-x-2 text-sm text-gray-600">
+                    <i class="fas fa-industry text-gray-400"></i>
+                    <span>{{ product.manufacturer }}</span>
+                  </div>
+                  <div v-if="product.origin" class="flex items-center space-x-2 text-xs text-gray-500">
+                    <i class="fas fa-globe text-gray-400"></i>
+                    <span>{{ product.origin }}</span>
+                  </div>
                 </div>
                 
-                <div class="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span class="text-gray-600">Mã SP:</span>
-                    <span class="font-mono bg-gray-100 px-2 py-1 rounded ml-1">{{ product.sku || 'N/A' }}</span>
-                  </div>
-                  <div>
-                    <span class="text-gray-600">Danh mục:</span>
-                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 ml-1">
-                      {{ product.category }}
+                <!-- Product Details Grid -->
+                <div class="grid grid-cols-1 gap-3">
+                  <!-- SKU and Category Row -->
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                      <span class="text-gray-600 text-sm">Mã SP:</span>
+                      <span class="text-xs font-mono text-gray-800">
+                        {{ product.sku || 'N/A' }}
+                      </span>
+                    </div>
+                    <span class="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border border-blue-200">
+                      <i class="fas fa-tag mr-1"></i>
+                      {{ getCategoryDisplayName(product.category) }}
                     </span>
                   </div>
-                  <div>
-                    <span class="text-gray-600">Giá:</span>
-                    <span class="font-medium text-gray-900 ml-1">{{ formatPrice(product.priceValue || product.price) }}</span>
+                  
+                  <!-- Price and Stock Row -->
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                      <i class="fas fa-coins text-yellow-500"></i>
+                      <span class="text-gray-600 text-sm">Giá:</span>
+                      <span class="font-bold text-gray-900">{{ formatPrice(product.priceValue || product.price) }}</span>
+                      <div v-if="product.discount" class="ml-2">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          <i class="fas fa-percentage mr-1"></i>
+                          -{{ product.discount }}%
+                        </span>
+                      </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                      <i class="fas fa-boxes text-gray-400"></i>
+                      <span class="text-gray-600 text-sm">Tồn kho:</span>
+                      <span :class="[
+                        'font-semibold',
+                        product.stockQuantity > 50 ? 'text-green-600' : 
+                        product.stockQuantity > 10 ? 'text-yellow-600' : 'text-red-600'
+                      ]">
+                        {{ product.stockQuantity || 0 }}
+                      </span>
+                      <div :class="[
+                        'w-2 h-2 rounded-full',
+                        product.stockQuantity > 50 ? 'bg-green-400' : 
+                        product.stockQuantity > 10 ? 'bg-yellow-400' : 'bg-red-400'
+                      ]"></div>
+                    </div>
                   </div>
-                  <div>
-                    <span class="text-gray-600">Tồn kho:</span>
+                </div>
+                
+                <!-- Status and Subcategory -->
+                <div class="flex items-center justify-between pt-2 border-t border-gray-100">
+                  <div class="flex items-center space-x-3">
                     <span :class="[
-                      'font-medium ml-1',
-                      product.stockQuantity > 50 ? 'text-green-600' : 
-                      product.stockQuantity > 10 ? 'text-yellow-600' : 'text-red-600'
+                      'inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full border',
+                      product.status === 'active' ? 'bg-green-50 text-green-800 border-green-200' : '',
+                      product.status === 'inactive' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' : '',
+                      product.status === 'out_of_stock' ? 'bg-red-50 text-red-800 border-red-200' : ''
                     ]">
-                      {{ product.stockQuantity || 0 }}
+                      <div :class="[
+                        'w-1.5 h-1.5 rounded-full mr-1.5',
+                        product.status === 'active' ? 'bg-green-400' : '',
+                        product.status === 'inactive' ? 'bg-yellow-400' : '',
+                        product.status === 'out_of_stock' ? 'bg-red-400' : ''
+                      ]"></div>
+                      {{ getStatusText(product.status) }}
                     </span>
-                  </div>
-                </div>
-                
-                <div class="flex items-center justify-between">
-                  <span :class="[
-                    'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
-                    product.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                  ]">
-                    {{ getStatusText(product.status) }}
-                  </span>
-                  <div v-if="product.stockQuantity === 0" class="text-xs text-red-600 font-medium">
-                    ⚠️ Hết hàng
+                    <div v-if="product.subcategory" class="text-xs text-gray-600">
+                      <i class="fas fa-arrow-right mr-1 text-gray-400"></i>
+                      {{ getSubcategoryDisplayName(product.subcategory) }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -486,36 +631,56 @@
 
     <!-- Create/Edit Product Modal -->
     <CreateEditModal 
-      v-if="showCreateModal"
+      ref="createEditModalRef"
+      :show="showCreateModal"
+      :is-editing="isEditing"
       :product="editingProduct"
+      :saving="saving"
+
+      :form-error="apiError"
+      :field-errors="Object.values(errors)"
       @close="closeModal"
       @save="saveProduct"
+      @clear-errors="clearAllErrors"
+      @edit-product-with-errors="handleEditProductWithErrors"
     />
+
+    <!-- Success Toast -->
+    <Transition name="toast">
+      <div v-if="showSuccessModal" class="fixed top-4 right-4 z-50">
+        <div class="bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3">
+          <i class="fas fa-check-circle text-xl"></i>
+          <span class="font-medium">{{ showSuccessMessage }}</span>
+          <button @click="showSuccessModal = false" class="text-green-200 hover:text-white">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+    </Transition>
 
     <!-- Delete Confirmation Modal -->
     <DeleteModal 
-      v-if="showDeleteModal"
+      :show="showDeleteModal"
       :product="productToDelete"
-      @close="showDeleteModal = false"
+      :form-error="apiError"
+      :field-errors="Object.values(errors)"
+      @close="closeDeleteModal"
       @confirm="confirmDelete"
+      @clear-errors="clearAllErrors"
     />
 
-    <!-- Success Modal -->
-    <SuccessModal 
-      v-if="showSuccessModal"
-      :message="successMessage"
-      @close="showSuccessModal = false"
-    />
+
   </div>
 </template>
 
 <script setup>
-import { ref, computed, reactive, onMounted, watch } from 'vue'
+import { ref, computed, reactive, onMounted, onUnmounted, watch } from 'vue'
 import CreateEditModal from '../components/ProductManagement/CreateEditModal.vue'
 import DeleteModal from '../components/ProductManagement/DeleteModal.vue'
-import SuccessModal from '../components/ProductManagement/SuccessModal.vue'
-import { mainCategories, getSubcategories } from '../constants/categories.js'
+import { useCategories, useLegacyCategories } from '../composables/useCategories.js'
 import { useProductApi } from '../services/productApi.js'
+import { useErrorHandler } from '../composables/useErrorHandler.js'
+import { ERROR_CODES } from '../constants/errCodes.js'
 
 // Reactive state
 const searchQuery = ref('')
@@ -526,16 +691,37 @@ const itemsPerPage = ref(10)
 const selectAll = ref(false)
 const selectedProducts = ref([])
 
+// Expandable rows state
+const expandedRows = ref(new Set())
+
 // Modal states
 const showCreateModal = ref(false)
 const showDeleteModal = ref(false)
-const showSuccessModal = ref(false)
 const editingProduct = ref(null)
 const productToDelete = ref(null)
-const successMessage = ref('')
+const saving = ref(false)
+const createEditModalRef = ref(null)
 
-// API service
+// Success message handling
+const showSuccessMessage = ref('')
+const showSuccessModal = ref(false)
+
+// API service and error handling
 const { getProducts, createProduct, updateProduct, deleteProduct: deleteProductApi } = useProductApi()
+const { errors, apiError, clearAllErrors, clearFieldError, setFieldError, setApiError, handleApiError, handleApiResponseError } = useErrorHandler()
+
+// Categories composable - use new system
+const { 
+  mainCategories: mainCategoriesNew,
+  mainCategoryOptions, 
+  getSubcategoryOptions, 
+  getCategoryInfo, 
+  getCategoryHierarchy,
+  convertLegacyCategory 
+} = useCategories()
+
+// Legacy support for backward compatibility
+const { mainCategories, getSubcategories, hasSubcategories } = useLegacyCategories()
 
 // Products data from API
 const products = ref([])
@@ -552,6 +738,8 @@ const apiData = ref({
 let searchTimeout = null
 
 // Computed properties
+const isEditing = computed(() => !!editingProduct.value)
+
 const filteredProducts = computed(() => {
   let filtered = [...products.value]
 
@@ -559,13 +747,19 @@ const filteredProducts = computed(() => {
   if (searchQuery.value) {
     filtered = filtered.filter(product => 
       product.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      product.manufacturer.toLowerCase().includes(searchQuery.value.toLowerCase())
+      product.manufacturer.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      (product.origin && product.origin.toLowerCase().includes(searchQuery.value.toLowerCase()))
     )
   }
 
   // Category filter
   if (categoryFilter.value) {
-    filtered = filtered.filter(product => product.category === categoryFilter.value)
+    filtered = filtered.filter(product => {
+      // Convert both to numbers for comparison
+      const productCategoryId = typeof product.category === 'string' ? parseInt(product.category) : product.category
+      const filterCategoryId = typeof categoryFilter.value === 'string' ? parseInt(categoryFilter.value) : categoryFilter.value
+      return productCategoryId === filterCategoryId
+    })
   }
 
   // Status filter
@@ -647,6 +841,8 @@ const fetchProducts = async () => {
     }
     
     if (categoryFilter.value) {
+      // Send category ID directly to backend
+      console.log('Sending category ID to backend:', categoryFilter.value)
       params.category = categoryFilter.value
     }
     
@@ -656,12 +852,34 @@ const fetchProducts = async () => {
     
     const response = await getProducts(params)
     
+    console.log('API Response:', response)
+    
     if (response.success) {
+      console.log('Products received:', response.data.products)
+      console.log('Products count:', response.data.products?.length)
+      
       products.value = response.data.products
+      
+      // Reset expanded rows when data changes to prevent ID conflicts
+      const currentProductIds = new Set(response.data.products.map(product => product.id))
+      const validExpandedRows = new Set()
+      
+      // Only keep expanded rows that still exist in current data
+      expandedRows.value.forEach(id => {
+        if (currentProductIds.has(id)) {
+          validExpandedRows.add(id)
+        }
+      })
+      
+      expandedRows.value = validExpandedRows
+      
       apiData.value = {
         pagination: response.data.pagination,
         filters: response.data.filters
       }
+      
+      console.log('Products stored:', products.value)
+      console.log('Filtered products:', filteredProducts.value)
     } else {
       throw new Error(response.error || 'Failed to fetch products')
     }
@@ -683,6 +901,8 @@ const debouncedSearch = () => {
   
   searchTimeout = setTimeout(() => {
     currentPage.value = 1 // Reset to first page when searching
+    // Clear expanded rows when searching
+    expandedRows.value.clear()
     fetchProducts()
   }, 500) // 500ms delay
 }
@@ -698,34 +918,82 @@ const getStatusText = (status) => {
 }
 
 const getProductImage = (product) => {
+  const placeholder = '/img/products/placeholder-product.jpg'
+  
   // Handle backend response structure
-  if (product.images && product.images.length > 0) {
+  if (product.images && Array.isArray(product.images) && product.images.length > 0) {
     const mainIndex = product.mainImageIndex || 0
-    return product.images[mainIndex] || product.images[0]
+    const imageUrl = product.images[mainIndex] || product.images[0]
+    return imageUrl || placeholder
   }
+  
   // Fallback to single image field
-  return product.image || '/img/products/placeholder-product.jpg'
+  const imageUrl = product.image
+  if (imageUrl && imageUrl.trim() !== '') {
+    return imageUrl
+  }
+  
+  return placeholder
 }
 
 const formatPrice = (price) => {
-  if (!price) return 'N/A'
+  if (!price && price !== 0) return 'N/A'
   // If price is already formatted (string), return as is
   if (typeof price === 'string' && price.includes('đ')) {
     return price
   }
   // If price is a number, format it
   const numPrice = parseInt(price)
+  if (isNaN(numPrice)) return 'N/A'
   return numPrice.toLocaleString('vi-VN') + 'đ'
 }
 
 const handleImageError = (event) => {
+  console.log('Image error, loading placeholder:', event.target.src)
   event.target.src = '/img/products/placeholder-product.jpg'
+  // Prevent infinite loop if placeholder also fails
+  event.target.onerror = null
+}
+
+// Helper methods for category display
+const getCategoryDisplayName = (categoryId) => {
+  if (!categoryId) return 'N/A'
+  
+  // If it's already a name (legacy), return as is
+  if (typeof categoryId === 'string' && isNaN(categoryId)) {
+    return categoryId
+  }
+  
+  // Convert to number if it's a string number
+  const numericId = typeof categoryId === 'string' ? parseInt(categoryId) : categoryId
+  
+  // Get category info by ID
+  const categoryInfo = getCategoryInfo(numericId)
+  return categoryInfo ? categoryInfo.name : `Unknown Category (ID: ${categoryId})`
+}
+
+const getSubcategoryDisplayName = (subcategoryId) => {
+  if (!subcategoryId) return 'N/A'
+  
+  // If it's already a name (legacy), return as is
+  if (typeof subcategoryId === 'string' && isNaN(subcategoryId)) {
+    return subcategoryId
+  }
+  
+  // Convert to number if it's a string number
+  const numericId = typeof subcategoryId === 'string' ? parseInt(subcategoryId) : subcategoryId
+  
+  // Get subcategory info by ID
+  const subcategoryInfo = getCategoryInfo(numericId)
+  return subcategoryInfo ? subcategoryInfo.name : `Unknown Subcategory (ID: ${subcategoryId})`
 }
 
 const editProduct = (product) => {
   editingProduct.value = { ...product }
   showCreateModal.value = true
 }
+
+
 
 const openDeleteModal = (product) => {
   productToDelete.value = product
@@ -737,74 +1005,190 @@ const toggleProductStatus = async (product) => {
     const newStatus = product.status === 'active' ? 'inactive' : 'active'
     const response = await updateProduct(product.id, { status: newStatus })
     
-    if (response.success) {
-      product.status = newStatus
-      showSuccessMessage(`Đã ${newStatus === 'active' ? 'kích hoạt' : 'tạm ngưng'} sản phẩm "${product.title}"`)
-    } else {
-      throw new Error(response.error || 'Failed to update product status')
-    }
+          if (response.success) {
+        product.status = newStatus
+        displaySuccessMessage(`Đã ${newStatus === 'active' ? 'kích hoạt' : 'tạm ngưng'} sản phẩm "${product.title}"`)
+      } else {
+        throw new Error(response.error?.message || response.error || 'Failed to update product status')
+      }
   } catch (err) {
     console.error('Toggle product status error:', err)
-    showSuccessMessage(`Lỗi: ${err.message}`)
+    handleProductApiError(err)
   }
 }
 
 const saveProduct = async (productData) => {
+  // Prevent multiple submissions
+  if (saving.value) return
+  
+  saving.value = true
   try {
+    let response
     if (editingProduct.value) {
       // Update existing product
-      const response = await updateProduct(editingProduct.value.id, productData)
-      if (response.success) {
-        showSuccessMessage('Đã cập nhật sản phẩm thành công')
-        await fetchProducts() // Refresh the list
-        closeModal() // Only close on success
-      } else {
-        throw new Error(response.error || 'Failed to update product')
-      }
+      response = await updateProduct(editingProduct.value.id, productData)
     } else {
       // Create new product
-      const response = await createProduct(productData)
-      if (response.success) {
-        showSuccessMessage('Đã tạo sản phẩm mới thành công')
-        await fetchProducts() // Refresh the list
-        closeModal() // Only close on success
-      } else {
-        throw new Error(response.error || 'Failed to create product')
+      response = await createProduct(productData)
+    }
+    
+    if (response && response.success) {
+      const action = editingProduct.value ? 'cập nhật' : 'tạo'
+      
+      // Handle image uploads for both create and edit modes
+      if (createEditModalRef.value) {
+        const productId = editingProduct.value ? editingProduct.value.id : response.data?.id
+        
+        if (productId) {
+          try {
+            const uploadResult = await createEditModalRef.value.uploadProductImages(productId)
+            
+            // Check upload result and decide whether to keep modal open
+            const shouldKeepModalOpen = createEditModalRef.value.handleUploadCompletion(productId, uploadResult)
+            
+            if (shouldKeepModalOpen) {
+              // Modal will show error dialog, don't close
+              await fetchProducts() // Refresh the list
+              return
+            }
+            // If no errors, continue to close modal normally
+          } catch (uploadError) {
+            console.error('Image upload failed:', uploadError)
+            // Create upload result for error handling
+            const uploadResult = { success: false, hasErrors: true }
+            const shouldKeepModalOpen = createEditModalRef.value.handleUploadCompletion(productId, uploadResult)
+            
+            if (shouldKeepModalOpen) {
+              // Modal will show error dialog, don't close
+              await fetchProducts() // Refresh the list
+              return
+            }
+            // If no dialog shown, close with error message
+            displaySuccessMessage(`Đã ${action} sản phẩm thành công, nhưng có lỗi khi tải lên hình ảnh`)
+            await fetchProducts()
+            closeModal()
+            return
+          }
+        }
       }
+      
+      displaySuccessMessage(`Đã ${action} sản phẩm thành công`)
+      await fetchProducts() // Refresh the list
+      closeModal() // Only close on success
+    } else {
+      // Handle backend error response
+      const errorMessage = response?.error?.message || response?.message || response?.error || 'Có lỗi xảy ra'
+      throw new Error(errorMessage)
     }
   } catch (err) {
     console.error('Save product error:', err)
-    // Don't close modal on error - let the modal handle the error display
-    showSuccessMessage(`Lỗi: ${err.message}`)
+    // Handle error in the modal - don't close it
+    handleProductApiError(err)
     throw err // Re-throw to let the modal handle it
+  } finally {
+    saving.value = false
   }
 }
 
 const confirmDelete = async () => {
   try {
     const response = await deleteProductApi(productToDelete.value.id)
-    if (response.success) {
-      showSuccessMessage('Đã xóa sản phẩm thành công')
+    if (response && response.success) {
+      displaySuccessMessage('Đã xóa sản phẩm thành công')
       await fetchProducts() // Refresh the list
     } else {
-      throw new Error(response.error || 'Failed to delete product')
+      const errorMessage = response?.error?.message || response?.message || response?.error || 'Không thể xóa sản phẩm'
+      throw new Error(errorMessage)
     }
   } catch (err) {
     console.error('Delete product error:', err)
-    showSuccessMessage(`Lỗi: ${err.message}`)
+    handleProductApiError(err)
   }
   showDeleteModal.value = false
   productToDelete.value = null
 }
 
 const closeModal = () => {
+  // Reset form if we were creating a new product (not editing)
+  if (!editingProduct.value && createEditModalRef.value) {
+    createEditModalRef.value.resetForm()
+  }
+  
   showCreateModal.value = false
   editingProduct.value = null
 }
 
-const showSuccessMessage = (message) => {
-  successMessage.value = message
+const closeDeleteModal = () => {
+  showDeleteModal.value = false
+  productToDelete.value = null
+}
+
+const handleEditProductWithErrors = async (productId) => {
+  console.log('handleEditProductWithErrors called with productId:', productId)
+  try {
+    // Use the productApi to get the specific product by ID
+    const { getProduct } = useProductApi()
+    console.log('Fetching product data...')
+    const response = await getProduct(productId)
+    
+    if (response.success && response.data) {
+      // Switch to edit mode with the created product
+      console.log('Setting editingProduct to:', response.data)
+      editingProduct.value = { ...response.data }
+      console.log('editingProduct set, isEditing computed:', isEditing.value)
+      console.log('showCreateModal state:', showCreateModal.value)
+      // Modal is already open, just switch to edit mode
+      console.log('Switched to edit mode for product:', productId)
+      
+      // Refresh the product list in background
+      await fetchProducts()
+    } else {
+      console.error('Failed to fetch product by ID:', response.error)
+      // If we can't fetch the specific product, try to find it in current list
+      const existingProduct = products.value.find(p => p.id === productId)
+      if (existingProduct) {
+        editingProduct.value = { ...existingProduct }
+        console.log('Found product in existing list, switched to edit mode')
+      } else {
+        console.error('Product not found in current list either')
+        // As last resort, close the modal
+        closeModal()
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch product for editing:', error)
+    // Try to find in existing products list as fallback
+    const existingProduct = products.value.find(p => p.id === productId)
+    if (existingProduct) {
+      editingProduct.value = { ...existingProduct }
+      console.log('Used existing product data as fallback')
+    } else {
+      // If we can't fetch the product at all, close the modal
+      closeModal()
+    }
+  }
+}
+
+const displaySuccessMessage = (message) => {
+  showSuccessMessage.value = message
   showSuccessModal.value = true
+  // Auto hide after 3 seconds
+  setTimeout(() => {
+    showSuccessModal.value = false
+    showSuccessMessage.value = ''
+  }, 3000)
+}
+
+const handleProductApiError = (error) => {
+  console.error('Product API Error:', error)
+  
+  // Use the centralized error handler
+  if (error.response) {
+    console.log('Error response data:', error.response)
+    return handleApiResponseError(error.response)
+  } else {
+    return handleApiError(error)
+  }
 }
 
 const toggleSelectAll = () => {
@@ -818,6 +1202,8 @@ const toggleSelectAll = () => {
 const changePage = (page) => {
   if (page >= 1 && page <= (apiData.value.pagination?.totalPages || 1)) {
     currentPage.value = page
+    // Clear expanded rows when changing pages to prevent ID conflicts
+    expandedRows.value.clear()
     fetchProducts()
   }
 }
@@ -827,6 +1213,8 @@ const clearFilters = () => {
   categoryFilter.value = ''
   statusFilter.value = ''
   currentPage.value = 1
+  // Clear expanded rows when filters change
+  expandedRows.value.clear()
   fetchProducts()
 }
 
@@ -836,9 +1224,50 @@ const exportProducts = () => {
   showSuccessMessage('Đã xuất dữ liệu sản phẩm thành công')
 }
 
+// Expandable rows functions
+const toggleRowExpansion = (productId) => {
+  if (expandedRows.value.has(productId)) {
+    expandedRows.value.delete(productId)
+  } else {
+    expandedRows.value.add(productId)
+  }
+}
+
+// Date formatting function for expanded row
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A'
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    })
+  } catch (error) {
+    return 'N/A'
+  }
+}
+
 // Watchers
-watch([searchQuery, categoryFilter, statusFilter], () => {
+watch([showCreateModal, showDeleteModal, showSuccessModal], ([createModal, deleteModal, successModal]) => {
+  if (createModal || deleteModal || successModal) {
+    document.body.style.overflow = 'hidden'
+  } else {
+    document.body.style.overflow = ''
+  }
+})
+
+// Watch search query with debouncing
+watch(searchQuery, () => {
   debouncedSearch()
+})
+
+// Watch filters without debouncing (immediate response for dropdowns)
+watch([categoryFilter, statusFilter], () => {
+  currentPage.value = 1 // Reset to first page when filtering
+  // Clear expanded rows when filters change
+  expandedRows.value.clear()
+  fetchProducts()
 })
 
 // Watch pagination limit changes
@@ -851,31 +1280,20 @@ watch(() => itemsPerPage.value, () => {
 onMounted(() => {
   fetchProducts()
 })
+
+onUnmounted(() => {
+  document.body.style.overflow = ''
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
+  }
+  // Reset modal states
+  showCreateModal.value = false
+  showDeleteModal.value = false
+  showSuccessModal.value = false
+})
 </script>
 
 <style scoped>
-/* Transition styles for create/edit modal fade-in and fade-out */
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-
-.modal-enter-active .bg-white,
-.modal-leave-active .bg-white {
-  transition: transform 0.3s ease, opacity 0.3s ease;
-}
-
-.modal-enter-from .bg-white,
-.modal-leave-to .bg-white {
-  transform: scale(0.95);
-  opacity: 0;
-}
-
 /* Custom scrollbar for modal body */
 .max-h-\[70vh\]::-webkit-scrollbar {
   width: 6px;
@@ -893,5 +1311,21 @@ onMounted(() => {
 
 .max-h-\[70vh\]::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* Toast transition styles */
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s ease;
+}
+
+.toast-enter-from {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(100%);
 }
 </style> 

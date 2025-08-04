@@ -16,6 +16,7 @@
       @close="showAuth = false" 
       @auth-success="forceLoginStateUpdate"
     />
+    <CartSidebar />
   </div>
 </template>
 
@@ -25,13 +26,14 @@ import { useRouter } from 'vue-router'
 import Navigation from './components/Header/Navigation.vue'
 import Footer from './components/Footer.vue'
 import AuthOverlay from './components/AuthOverlay/AuthOverlay.vue'
+import CartSidebar from './components/Common/CartSidebar.vue'
 import { useAuth } from './composables/useAuth.js'
 
 const showAuth = ref(false)
 const router = useRouter()
 
 // Use the auth composable
-const { isLoggedIn, user, isLoading, logout, forceLoginStateUpdate } = useAuth();
+const { isLoggedIn, user, isLoading, logout, forceLoginStateUpdate } = useAuth()
 
 
 
@@ -45,3 +47,4 @@ const handleLogout = async () => {
   router.push('/')
 }
 </script>
+

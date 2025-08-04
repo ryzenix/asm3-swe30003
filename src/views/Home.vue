@@ -143,6 +143,27 @@
             />
         </div>
         
+        <!-- Demo Section (for testing) -->
+        <div class="container mx-auto px-4 my-8">
+            <div class="text-center space-y-4">
+                <router-link 
+                    to="/admin/orders"
+                    class="inline-flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl mr-4"
+                >
+                    <i class="fas fa-cog"></i>
+                    <span>Demo: Quản lý đơn hàng</span>
+                </router-link>
+                
+                <router-link 
+                    to="/orders/5276043"
+                    class="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                >
+                    <i class="fas fa-list-alt"></i>
+                    <span>Demo: Xem chi tiết đơn hàng</span>
+                </router-link>
+            </div>
+        </div>
+
         <!-- Trust Badges Section -->
         <div class="container mx-auto px-4 my-12">
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">

@@ -1,7 +1,7 @@
 // services/productApi.js
 import { useErrorHandler } from '../composables/useErrorHandler.js'
 
-const API_BASE_URL = 'http://localhost:3000/products'
+const API_BASE_URL = 'http://localhost:3000'
 
 export function useProductApi() {
   const { makeApiRequest } = useErrorHandler()
@@ -20,8 +20,11 @@ export function useProductApi() {
       if (params.category) queryParams.append('category', params.category)
       if (params.status) queryParams.append('status', params.status)
       if (params.manufacturer) queryParams.append('manufacturer', params.manufacturer)
+      
+      // Add sort parameters
+      if (params.sort) queryParams.append('sort', params.sort)
 
-      const url = `${API_BASE_URL}/list?${queryParams.toString()}`
+      const url = `${API_BASE_URL}/products/list?${queryParams.toString()}`
       const response = await makeApiRequest(url)
       
       return response
@@ -34,7 +37,7 @@ export function useProductApi() {
   // Get single product by ID
   const getProduct = async (id) => {
     try {
-      const url = `${API_BASE_URL}/${id}`
+      const url = `${API_BASE_URL}/products/${id}`
       const response = await makeApiRequest(url)
       
       return response
@@ -47,7 +50,7 @@ export function useProductApi() {
   // Create new product
   const createProduct = async (productData) => {
     try {
-      const url = `${API_BASE_URL}/create`
+      const url = `${API_BASE_URL}/products/management/create`
       const response = await makeApiRequest(url, {
         method: 'POST',
         body: JSON.stringify(productData)
@@ -63,7 +66,7 @@ export function useProductApi() {
   // Update existing product
   const updateProduct = async (id, productData) => {
     try {
-      const url = `${API_BASE_URL}/update/${id}`
+      const url = `${API_BASE_URL}/products/management/update/${id}`
       const response = await makeApiRequest(url, {
         method: 'PUT',
         body: JSON.stringify(productData)
@@ -79,7 +82,7 @@ export function useProductApi() {
   // Delete product
   const deleteProduct = async (id) => {
     try {
-      const url = `${API_BASE_URL}/delete/${id}`
+      const url = `${API_BASE_URL}/products/management/delete/${id}`
       const response = await makeApiRequest(url, {
         method: 'DELETE'
       })
@@ -97,7 +100,7 @@ export function useProductApi() {
       const formData = new FormData()
       formData.append('image', file)
       
-      const url = `${API_BASE_URL}/${productId}/images/upload`
+      const url = `${API_BASE_URL}/products/management/${productId}/images/upload`
       const response = await makeApiRequest(url, {
         method: 'POST',
         body: formData,
@@ -116,7 +119,7 @@ export function useProductApi() {
   // Delete product image
   const deleteImage = async (productId, imageIndex) => {
     try {
-      const url = `${API_BASE_URL}/${productId}/images/${imageIndex}`
+      const url = `${API_BASE_URL}/products/management/${productId}/images/${imageIndex}`
       const response = await makeApiRequest(url, {
         method: 'DELETE'
       })
@@ -131,7 +134,7 @@ export function useProductApi() {
   // Set main image
   const setMainImage = async (productId, imageIndex) => {
     try {
-      const url = `${API_BASE_URL}/${productId}/images/${imageIndex}/main`
+      const url = `${API_BASE_URL}/products/management/${productId}/images/${imageIndex}/main`
       const response = await makeApiRequest(url, {
         method: 'PUT'
       })
@@ -139,6 +142,19 @@ export function useProductApi() {
       return response
     } catch (error) {
       console.error('Set main image error:', error)
+      throw error
+    }
+  }
+
+  // Get filter options for products
+  const getFilterOptions = async () => {
+    try {
+      const url = `${API_BASE_URL}/products/filter-options`
+      const response = await makeApiRequest(url)
+      
+      return response
+    } catch (error) {
+      console.error('Get filter options error:', error)
       throw error
     }
   }
@@ -151,6 +167,7 @@ export function useProductApi() {
     deleteProduct,
     uploadImage,
     deleteImage,
-    setMainImage
+    setMainImage,
+    getFilterOptions
   }
 } 

@@ -40,10 +40,7 @@ export const productCategories = {
     'Nhiệt kế',
     'Khẩu trang y tế',
     'Băng gạc'
-  ],
-  'Bệnh lý': [],
-  'Góc sức khỏe': [],
-  'Tin tức': []
+  ]
 }
 
 // Lấy danh sách các category chính

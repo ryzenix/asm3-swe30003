@@ -7,7 +7,7 @@ This document describes the integration of the backend API endpoints with the Vu
 
 ### Base URL
 ```
-http://localhost:3000/api/products
+http://localhost:3000/management/products
 ```
 
 ### Available Endpoints

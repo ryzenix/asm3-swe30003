@@ -55,7 +55,7 @@
               ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-transparent' 
               : 'border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent'
           ]"
-          @blur="validateField('email')"
+          @blur="validateFieldWrapper('email')"
           @input="clearFieldError('email')"
           autocomplete="email"
         />
@@ -85,7 +85,7 @@
                 ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-transparent' 
                 : 'border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent'
             ]"
-            @blur="validateField('password')"
+            @blur="validateFieldWrapper('password')"
             @input="clearFieldError('password')"
             autocomplete="current-password"
           />
@@ -145,20 +145,24 @@
       </div>
 
       <!-- API Error Display -->
-      <div v-if="apiError.message" class="mb-4 p-3 rounded-lg" :class="getErrorDisplayClass(apiError.code)">
+      <div v-if="apiError" class="mb-4 p-3 rounded-lg" :class="getErrorDisplayClass('RATE_LIMITED')">
         <div class="flex items-start">
           <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
           </svg>
           <div class="flex-1">
-            <p class="text-sm font-medium">{{ apiError.message }}</p>
+            <p class="text-sm font-medium">{{ apiError }}</p>
             <!-- Show remaining attempts for authentication failures -->
-            <div v-if="apiError.code === 'AUTHENTICATION_FAILED' && apiError.remainingAttempts !== undefined" class="mt-1">
-              <p class="text-xs">Còn lại {{ apiError.remainingAttempts }} lần thử</p>
+            <div v-if="remainingAttempts < 5 && remainingAttempts > 0" class="mt-1">
+              <p class="text-xs">Còn lại {{ remainingAttempts }} lần thử</p>
             </div>
-            <!-- Show retry time for rate limiting -->
-            <div v-if="apiError.code === 'RATE_LIMITED' && apiError.retryAfter" class="mt-1">
-              <p class="text-xs">Thử lại sau {{ formatTime(apiError.retryAfter) }}</p>
+            <!-- Show retry time for rate limiting using secondsRemaining -->
+            <div v-if="isBlocked && secondsRemaining > 0" class="mt-1">
+              <p class="text-xs">Thử lại sau {{ formatTime(secondsRemaining) }}</p>
+            </div>
+            <!-- Show retry time for rate limiting using blockTimeRemaining -->
+            <div v-else-if="isBlocked && blockTimeRemaining > 0" class="mt-1">
+              <p class="text-xs">Thử lại sau {{ formatTime(blockTimeRemaining) }}</p>
             </div>
           </div>
         </div>
@@ -259,31 +263,30 @@
 
 <script setup>
 import { ref, computed, onUnmounted } from 'vue'
+import { useErrorHandler } from '../../composables/useErrorHandler'
 
 const emit = defineEmits(['switch', 'close', 'manager-login', 'auth-success'])
 
-// Error code to Vietnamese message mapping
-const ERROR_MESSAGES = {
-  MISSING_FIELDS: 'Vui lòng nhập đầy đủ thông tin bắt buộc',
-  INVALID_FORMAT: 'Định dạng không hợp lệ',
-  AUTHENTICATION_FAILED: 'Email hoặc mật khẩu không chính xác',
-  AUTHORIZATION_FAILED: 'Không có quyền truy cập',
-  USER_NOT_FOUND: 'Tài khoản không tồn tại hoặc đã bị vô hiệu hóa',
-  USER_EXISTS: 'Email này đã được sử dụng',
-  RATE_LIMITED: 'Quá nhiều lần đăng nhập thất bại. Vui lòng thử lại sau',
-  SERVER_ERROR: 'Lỗi máy chủ. Vui lòng thử lại sau',
-  VALIDATION_ERROR: 'Thông tin không hợp lệ',
-  PASSWORD_WEAK: 'Mật khẩu không đủ mạnh',
-  ACCOUNT_BLOCKED: 'Tài khoản đã bị khóa tạm thời'
-}
+// Use centralized error handler
+const {
+  errors,
+  apiError,
+  clearAllErrors,
+  clearFieldError,
+  setFieldError,
+  handleApiError,
+  makeApiRequest,
+  validateField,
+  validateForm: validateFormCentralized
+} = useErrorHandler()
 
 // Form state
 const showPassword = ref(false)
 const isLoading = ref(false)
-const apiError = ref({})
 const remainingAttempts = ref(5)
 const isBlocked = ref(false)
 const blockTimeRemaining = ref(0)
+const secondsRemaining = ref(0)
 let blockTimer = null
 
 const loginForm = ref({
@@ -292,25 +295,11 @@ const loginForm = ref({
   rememberMe: false
 })
 
-const errors = ref({
-  email: '',
-  password: ''
-})
-
-// Validation rules
-const validationRules = {
-  email: (value) => {
-    if (!value.trim()) return 'Email là bắt buộc'
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(value)) return 'Email không hợp lệ'
-    return ''
-  },
-  
-  password: (value) => {
-    if (!value) return 'Mật khẩu là bắt buộc'
-    if (value.length < 8) return 'Mật khẩu phải có ít nhất 8 ký tự'
-    return ''
-  }
+// Validation wrapper to use centralized validator
+const validateFieldWrapper = (fieldName) => {
+  const value = loginForm.value[fieldName]
+  const extraParam = fieldName === 'confirmPassword' ? loginForm.value.password : null
+  return validateField(fieldName, value, extraParam)
 }
 
 // Computed properties
@@ -324,16 +313,11 @@ const showAttemptsWarning = computed(() => remainingAttempts.value <= 2 && remai
 
 // Debug computed for block time
 const debugBlockTime = computed(() => {
-  console.log('Debug - isBlocked:', isBlocked.value, 'blockTimeRemaining:', blockTimeRemaining.value)
-  return formatTime(blockTimeRemaining.value)
+  const timeToDisplay = secondsRemaining.value || blockTimeRemaining.value
+  return formatTime(timeToDisplay)
 })
 
-// Error handling utilities
-const getErrorMessage = (errorCode, fallbackMessage = '') => {
-  console.log(ERROR_MESSAGES[errorCode])
-  return ERROR_MESSAGES[errorCode] || fallbackMessage || 'Có lỗi xảy ra. Vui lòng thử lại'
-}
-
+// Error display styling
 const getErrorDisplayClass = (errorCode) => {
   const baseClasses = 'border'
   
@@ -352,30 +336,14 @@ const getErrorDisplayClass = (errorCode) => {
   }
 }
 
-// Validation functions
-const validateField = (fieldName) => {
-  const rule = validationRules[fieldName]
-  if (rule) {
-    errors.value[fieldName] = rule(loginForm.value[fieldName])
-  }
-}
-
-const clearFieldError = (fieldName) => {
-  errors.value[fieldName] = ''
-  apiError.value = {}
-}
-
+// Validate form using centralized validator
 const validateForm = () => {
-  let isValid = true
+  const validationRules = [
+    { field: 'email', value: loginForm.value.email },
+    { field: 'password', value: loginForm.value.password }
+  ]
   
-  Object.keys(validationRules).forEach(fieldName => {
-    validateField(fieldName)
-    if (errors.value[fieldName]) {
-      isValid = false
-    }
-  })
-  
-  return isValid
+  return validateFormCentralized(loginForm.value, validationRules)
 }
 
 // Utility functions
@@ -385,7 +353,7 @@ const formatTime = (seconds) => {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
-const startBlockTimer = (duration = 300) => {
+const startBlockTimer = (duration = 300, useSecondsRemaining = false) => {
   // Clear any existing timer first
   if (blockTimer) {
     clearInterval(blockTimer)
@@ -393,48 +361,53 @@ const startBlockTimer = (duration = 300) => {
   }
   
   isBlocked.value = true
-  blockTimeRemaining.value = duration
+  
+  if (useSecondsRemaining) {
+    secondsRemaining.value = duration
+  } else {
+    blockTimeRemaining.value = duration
+  }
   
   console.log('Starting block timer with duration:', duration, 'seconds')
   
   blockTimer = setInterval(() => {
-    if (blockTimeRemaining.value > 0) {
-      blockTimeRemaining.value--
-      console.log('Block time remaining:', blockTimeRemaining.value, 'seconds')
-    }
-    
-    if (blockTimeRemaining.value <= 0) {
-      console.log('Block timer finished, clearing interval')
-      clearInterval(blockTimer)
-      blockTimer = null
-      isBlocked.value = false
-      remainingAttempts.value = 5
-      apiError.value = {}
+    if (useSecondsRemaining) {
+      if (secondsRemaining.value > 0) {
+        secondsRemaining.value--
+        console.log('Seconds remaining:', secondsRemaining.value)
+      }
+      
+      if (secondsRemaining.value <= 0) {
+        clearInterval(blockTimer)
+        blockTimer = null
+        isBlocked.value = false
+        remainingAttempts.value = 5
+        clearAllErrors()
+      }
+    } else {
+      if (blockTimeRemaining.value > 0) {
+        blockTimeRemaining.value--
+        console.log('Block time remaining:', blockTimeRemaining.value, 'seconds')
+      }
+      
+      if (blockTimeRemaining.value <= 0) {
+        console.log('Block timer finished, clearing interval')
+        clearInterval(blockTimer)
+        blockTimer = null
+        isBlocked.value = false
+        remainingAttempts.value = 5
+        clearAllErrors()
+      }
     }
   }, 1000)
 }
 
 // API Service Functions
 const loginUser = async (credentials) => {
-  const response = await fetch('http://localhost:3000/auth/user/login', {
+  return await makeApiRequest('http://localhost:3000/auth/user/login', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
     body: JSON.stringify(credentials)
   })
-  
-  const data = await response.json()
-  
-  if (!response.ok) {
-    const error = new Error(data.error?.message || 'Login failed')
-    error.errorData = data.error || {}
-    error.status = response.status
-    throw error
-  }
-  
-  return data
 }
 
 // Prepare data for API call
@@ -445,64 +418,55 @@ const prepareApiData = () => {
   }
 }
 
-// Handle standardized API errors
-const handleApiError = (error) => {
-  // console.error('API Error:', error)
+// Handle API errors with new format support  
+const handleLoginApiError = (error) => {
+  console.error('Login API Error:', error)
   
-  const errorData = error.errorData || {}
-  const errorCode = errorData.code
-  const errorMessage = getErrorMessage(errorCode, errorData.message)
-  console.log('API Error Code:', errorCode)
-  console.log('Error Data:', errorData)
+  // Use centralized error handler and get error info
+  const errorInfo = error.errorInfo || handleApiError(error, error.response)
   
-  // Update API error display
-  apiError.value = {
-    ...errorData,
-    code: errorCode,
-    message: errorMessage
-  }
-
-  // Handle specific error types
-  switch (errorCode) {
-    case 'RATE_LIMITED':
-      console.log('Rate limited detected, starting block timer')
+  // Handle login-specific error details
+  if (errorInfo.code === 'RATE_LIMITED') {
+    isBlocked.value = true
+    
+    // Handle new error format with details
+    if (errorInfo.details?.secondsRemaining) {
+      secondsRemaining.value = errorInfo.details.secondsRemaining
+      startBlockTimer(errorInfo.details.secondsRemaining, true)
+    } else if (errorInfo.details?.retryAfter) {
+      startBlockTimer(errorInfo.details.retryAfter)
+    } else if (errorInfo.retryAfter) {
+      startBlockTimer(errorInfo.retryAfter)
+    }
+  } else if (errorInfo.code === 'AUTHENTICATION_FAILED') {
+    // Handle remaining attempts from details
+    if (errorInfo.details?.remainingAttempts !== undefined) {
+      remainingAttempts.value = errorInfo.details.remainingAttempts
+    } else if (errorInfo.remainingAttempts !== undefined) {
+      remainingAttempts.value = errorInfo.remainingAttempts
+    }
+    
+    // Handle blocking from details
+    if (errorInfo.details?.blocked || errorInfo.blocked) {
       isBlocked.value = true
-      if (errorData.retryAfter || errorData.secondsRemaining) {
-        const duration = errorData.retryAfter || errorData.secondsRemaining
-        console.log('Block duration:', duration)
-        startBlockTimer(duration)
+      const blockDuration = errorInfo.details?.secondsRemaining || 
+                           errorInfo.secondsRemaining || 
+                           errorInfo.details?.retryAfter || 
+                           errorInfo.retryAfter || 300
+                           
+      if (errorInfo.details?.secondsRemaining || errorInfo.secondsRemaining) {
+        startBlockTimer(blockDuration, true)
+      } else {
+        startBlockTimer(blockDuration)
       }
-      break
-      
-    case 'AUTHENTICATION_FAILED':
-      if (typeof errorData.remainingAttempts === 'number') {
-        remainingAttempts.value = errorData.remainingAttempts
-      }
-      break
-      
-    case 'MISSING_FIELDS':
-      // Highlight missing fields
-      if (errorData.fields && Array.isArray(errorData.fields)) {
-        errorData.fields.forEach(field => {
-          if (validationRules[field]) {
-            errors.value[field] = `${field === 'email' ? 'Email' : 'Mật khẩu'} là bắt buộc`
-          }
-        })
-      }
-      break
-      
-    case 'INVALID_FORMAT':
-      if (errorData.field) {
-        errors.value[errorData.field] = errorMessage
-      }
-      break
+    }
   }
 }
 
 // Main login handler
 const handleLogin = async () => {
   // Clear previous errors
-  apiError.value = {}
+  clearAllErrors()
   
   // Check if blocked
   if (isBlocked.value) return
@@ -536,8 +500,8 @@ const handleLogin = async () => {
     emit('close')
     
   } catch (error) {
-    // console.error('Login error:', error)
-    handleApiError(error)
+    console.error('Login error:', error)
+    handleLoginApiError(error)
   } finally {
     isLoading.value = false
   }
@@ -557,12 +521,7 @@ const resetForm = () => {
     rememberMe: false
   }
   
-  errors.value = {
-    email: '',
-    password: ''
-  }
-  
-  apiError.value = {}
+  clearAllErrors()
 }
 
 // Cleanup

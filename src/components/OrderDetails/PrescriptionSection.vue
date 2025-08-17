@@ -9,7 +9,10 @@
           </div>
           <div>
             <h3 class="text-lg font-semibold text-gray-900">Đơn thuốc</h3>
-            <p class="text-sm text-gray-600">{{ prescriptionData.files.length }} file đã tải lên</p>
+            <p class="text-sm text-gray-600">
+              {{ prescriptionData.images?.length || 0 }} hình ảnh
+              <span v-if="prescriptionData.patientName"> • {{ prescriptionData.patientName }}</span>
+            </p>
           </div>
         </div>
         
@@ -33,23 +36,103 @@
 
     <!-- Content -->
     <div class="p-6 space-y-6">
-      <!-- Validation Info -->
-      <div v-if="prescriptionData.validationInfo" class="space-y-4">
+      <!-- Patient Information -->
+      <div v-if="prescriptionData.patientName" class="space-y-4">
+        <div class="flex items-start space-x-3">
+          <i class="fas fa-user text-green-500 mt-1"></i>
+          <div class="flex-1">
+            <h4 class="font-medium text-gray-900 mb-2">Thông tin bệnh nhân</h4>
+            <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-600">Tên bệnh nhân:</span>
+                <span class="font-medium text-gray-900">{{ prescriptionData.patientName }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Doctor and Clinic Information -->
+      <div v-if="prescriptionData.doctorName || prescriptionData.clinicName" class="space-y-4">
         <div class="flex items-start space-x-3">
           <i class="fas fa-user-md text-blue-500 mt-1"></i>
           <div class="flex-1">
+            <h4 class="font-medium text-gray-900 mb-2">Thông tin bác sĩ & phòng khám</h4>
+            <div class="bg-blue-50 rounded-lg p-4 border border-blue-200 space-y-2">
+              <div v-if="prescriptionData.doctorName" class="flex justify-between text-sm">
+                <span class="text-gray-600">Bác sĩ kê đơn:</span>
+                <span class="font-medium text-gray-900">{{ prescriptionData.doctorName }}</span>
+              </div>
+              <div v-if="prescriptionData.doctorLicense" class="flex justify-between text-sm">
+                <span class="text-gray-600">Số chứng chỉ hành nghề:</span>
+                <span class="font-medium text-gray-900">{{ prescriptionData.doctorLicense }}</span>
+              </div>
+              <div v-if="prescriptionData.clinicName" class="flex justify-between text-sm">
+                <span class="text-gray-600">Phòng khám/Bệnh viện:</span>
+                <span class="font-medium text-gray-900">{{ prescriptionData.clinicName }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prescription Dates -->
+      <div v-if="prescriptionData.issueDate || prescriptionData.expiryDate" class="space-y-4">
+        <div class="flex items-start space-x-3">
+          <i class="fas fa-calendar-alt text-purple-500 mt-1"></i>
+          <div class="flex-1">
+            <h4 class="font-medium text-gray-900 mb-2">Thông tin thời gian</h4>
+            <div class="bg-purple-50 rounded-lg p-4 border border-purple-200 space-y-2">
+              <div v-if="prescriptionData.issueDate" class="flex justify-between text-sm">
+                <span class="text-gray-600">Ngày kê đơn:</span>
+                <span class="font-medium text-gray-900">{{ formatDate(prescriptionData.issueDate) }}</span>
+              </div>
+              <div v-if="prescriptionData.expiryDate" class="flex justify-between text-sm">
+                <span class="text-gray-600">Hạn sử dụng đơn thuốc:</span>
+                <span class="font-medium text-gray-900">{{ formatDate(prescriptionData.expiryDate) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Diagnosis and Notes -->
+      <div v-if="prescriptionData.diagnosis || prescriptionData.notes" class="space-y-4">
+        <div class="flex items-start space-x-3">
+          <i class="fas fa-stethoscope text-orange-500 mt-1"></i>
+          <div class="flex-1">
+            <h4 class="font-medium text-gray-900 mb-2">Chẩn đoán & Ghi chú</h4>
+            <div class="bg-orange-50 rounded-lg p-4 border border-orange-200 space-y-3">
+              <div v-if="prescriptionData.diagnosis">
+                <span class="text-gray-600 text-sm font-medium">Chẩn đoán:</span>
+                <p class="text-gray-900 mt-1">{{ prescriptionData.diagnosis }}</p>
+              </div>
+              <div v-if="prescriptionData.notes" class="pt-2 border-t border-orange-200">
+                <span class="text-gray-600 text-sm font-medium">Ghi chú của bác sĩ:</span>
+                <p class="text-gray-900 mt-1">{{ prescriptionData.notes }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Validation Info -->
+      <div v-if="prescriptionData.validationInfo" class="space-y-4">
+        <div class="flex items-start space-x-3">
+          <i class="fas fa-check-circle text-teal-500 mt-1"></i>
+          <div class="flex-1">
             <h4 class="font-medium text-gray-900 mb-2">Thông tin xác thực</h4>
-            <div class="bg-gray-50 rounded-lg p-4 space-y-2">
+            <div class="bg-teal-50 rounded-lg p-4 border border-teal-200 space-y-2">
               <div class="flex justify-between text-sm">
                 <span class="text-gray-600">Dược sĩ xác thực:</span>
-                <span class="font-medium">{{ prescriptionData.validationInfo.pharmacistName }}</span>
+                <span class="font-medium text-gray-900">{{ prescriptionData.validationInfo.pharmacistName }}</span>
               </div>
               <div class="flex justify-between text-sm">
                 <span class="text-gray-600">Thời gian xác thực:</span>
-                <span class="font-medium">{{ formatDate(prescriptionData.validationInfo.validatedAt) }}</span>
+                <span class="font-medium text-gray-900">{{ formatDate(prescriptionData.validationInfo.validatedAt) }}</span>
               </div>
-              <div v-if="prescriptionData.validationInfo.notes" class="pt-2 border-t border-gray-200">
-                <span class="text-gray-600 text-sm">Ghi chú:</span>
+              <div v-if="prescriptionData.validationInfo.notes" class="pt-2 border-t border-teal-200">
+                <span class="text-gray-600 text-sm font-medium">Ghi chú xác thực:</span>
                 <p class="text-sm text-gray-900 mt-1">{{ prescriptionData.validationInfo.notes }}</p>
               </div>
             </div>
@@ -105,63 +188,56 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div 
-            v-for="(file, index) in prescriptionData.files" 
+            v-for="(imageUrl, index) in prescriptionData.images" 
             :key="index"
             class="relative group border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 transition-colors cursor-pointer"
-            @click="previewFile(file)"
+            @click="previewImage(imageUrl, index)"
           >
-            <!-- File Preview -->
+            <!-- Image Preview -->
             <div class="aspect-square">
               <img 
-                v-if="file.type.startsWith('image/')"
-                :src="file.url" 
-                :alt="file.name"
+                :src="imageUrl" 
+                :alt="`Đơn thuốc ${index + 1}`"
                 class="w-full h-full object-cover"
+                @error="handleImageError"
               />
-              <div v-else class="w-full h-full bg-red-100 flex items-center justify-center">
-                <i class="fas fa-file-pdf text-red-500 text-3xl"></i>
-              </div>
             </div>
 
-            <!-- File Info Overlay -->
+            <!-- Image Info Overlay -->
             <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3">
-              <h5 class="text-white text-sm font-medium truncate">{{ file.name }}</h5>
-              <p class="text-white/80 text-xs">{{ formatFileSize(file.size) }}</p>
+              <h5 class="text-white text-sm font-medium">Đơn thuốc {{ index + 1 }}</h5>
+              <p class="text-white/80 text-xs">Hình ảnh</p>
             </div>
 
             <!-- Actions Overlay -->
             <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-              <div class="flex space-x-2">
-                <button 
-                  @click.stop="previewFile(file)"
-                  class="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors"
-                  title="Xem trước"
-                >
-                  <i class="fas fa-eye"></i>
-                </button>
-                <button 
-                  @click.stop="downloadFile(file)"
-                  class="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors"
-                  title="Tải xuống"
-                >
-                  <i class="fas fa-download"></i>
-                </button>
-              </div>
+              <button 
+                @click.stop="previewImage(imageUrl, index)"
+                class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+                title="Xem trước"
+              >
+                <i class="fas fa-eye text-lg"></i>
+              </button>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Upload Info -->
-      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div class="space-y-4">
         <div class="flex items-start space-x-3">
-          <i class="fas fa-info-circle text-blue-500 mt-0.5"></i>
+          <i class="fas fa-upload text-indigo-500 mt-1"></i>
           <div class="flex-1">
-            <h5 class="text-blue-800 font-medium mb-1">Thông tin tải lên</h5>
-            <div class="text-blue-700 text-sm space-y-1">
-              <p>Thời gian tải lên: {{ formatDate(prescriptionData.uploadedAt) }}</p>
-              <p>Tổng số file: {{ prescriptionData.files.length }}</p>
-              <p v-if="prescriptionData.expiryDate">Hạn sử dụng đơn thuốc: {{ formatDate(prescriptionData.expiryDate) }}</p>
+            <h4 class="font-medium text-gray-900 mb-2">Thông tin tải lên</h4>
+            <div class="bg-indigo-50 rounded-lg p-4 border border-indigo-200 space-y-2">
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-600">Thời gian tải lên:</span>
+                <span class="font-medium text-gray-900">{{ formatDate(prescriptionData.uploadedAt) }}</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-600">Tổng số file hình ảnh:</span>
+                <span class="font-medium text-gray-900">{{ prescriptionData.images?.length || 0 }} file</span>
+              </div>
             </div>
           </div>
         </div>
@@ -194,21 +270,15 @@
           </div>
           <div class="p-4">
             <img 
-              v-if="previewFileData?.type.startsWith('image/')"
+              v-if="previewFileData"
               :src="previewFileData.url" 
               :alt="previewFileData.name"
               class="max-w-full max-h-[70vh] object-contain mx-auto"
+              @error="handlePreviewError"
             />
             <div v-else class="text-center py-8">
-              <i class="fas fa-file-pdf text-red-500 text-4xl mb-4"></i>
-              <p class="text-gray-600">Không thể xem trước file PDF</p>
-              <button 
-                @click="downloadFile(previewFileData)"
-                class="mt-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                <i class="fas fa-download mr-2"></i>
-                Tải xuống để xem
-              </button>
+              <i class="fas fa-image text-gray-400 text-4xl mb-4"></i>
+              <p class="text-gray-600">Không thể xem trước hình ảnh này</p>
             </div>
           </div>
         </div>
@@ -229,42 +299,40 @@ const props = defineProps({
     type: Array,
     default: () => []
   }
-})
+});
 
 // Reactive state
 const previewFileData = ref(null)
 
 // Methods
-const previewFile = (file) => {
-  previewFileData.value = file
+const previewImage = (imageUrl, index) => {
+  previewFileData.value = {
+    url: imageUrl,
+    name: `Đơn thuốc ${index + 1}`,
+    index: index
+  }
 }
 
 const closePreview = () => {
   previewFileData.value = null
 }
 
-const downloadFile = (file) => {
+const downloadImage = (imageUrl, index) => {
   // Create download link
   const link = document.createElement('a')
-  link.href = file.url
-  link.download = file.name
+  link.href = imageUrl
+  link.download = `don-thuoc-${index + 1}.jpg`
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
 }
 
 const downloadAllFiles = () => {
-  props.prescriptionData.files.forEach(file => {
-    setTimeout(() => downloadFile(file), 100) // Small delay between downloads
-  })
-}
-
-const formatFileSize = (bytes) => {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  if (props.prescriptionData.images) {
+    props.prescriptionData.images.forEach((imageUrl, index) => {
+      setTimeout(() => downloadImage(imageUrl, index), 100 * index) // Small delay between downloads
+    })
+  }
 }
 
 const formatPrice = (price) => {
@@ -282,7 +350,12 @@ const formatDate = (date) => {
 }
 
 const handleImageError = (event) => {
-  event.target.src = '/img/products/placeholder-product.jpg'
+  console.warn('Failed to load prescription image:', event.target.src)
+  event.target.style.display = 'none'
+}
+
+const handlePreviewError = (event) => {
+  console.warn('Failed to load preview image:', event.target.src)
 }
 </script>
 

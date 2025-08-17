@@ -11,6 +11,7 @@
           <LoginModal
             v-if="current === 'login'"
             key="login"
+            :autoClose="autoClose"
             @switch="switchToRegister"
             @manager-login="switchToSuperuser"
             @close="emit('close')"
@@ -19,6 +20,7 @@
           <RegisterModal
             v-else-if="current === 'register'"
             key="register"
+            :autoClose="autoClose"
             @back="switchToLogin"
             @close="emit('close')"
             @auth-success="handleAuthSuccess"
@@ -47,7 +49,11 @@ import SuperuserModal from './SuperuserModal.vue'
 const props = defineProps({
   visible: Boolean,
   isLoggedIn: Boolean,
-  user: Object
+  user: Object,
+  autoClose: {
+    type: Boolean,
+    default: true
+  }
 })
 const emit = defineEmits(['close', 'auth-success'])
 

@@ -9,7 +9,7 @@ import OrderManagement from '../views/OrderManagement.vue'
 import CustomerOrders from '../views/CustomerOrders.vue'
 import StaffManagement from '../views/StaffManagement.vue'
 import ProductManagement from '../views/ProductManagement.vue'
-import PrescriptionManagement from '../views/PrescriptionManagement.vue'
+
 
 const routes = [
   { path: '/', name: 'Home', component: Home },
@@ -20,7 +20,7 @@ const routes = [
   { path: '/orders/:orderId', name: 'Order Details', component: OrderDetails },
   { path: '/my-orders', name: 'Customer Orders', component: CustomerOrders },
   { path: '/admin/orders', name: 'Order Management', component: OrderManagement },
-  { path: '/my-prescriptions', name: 'Prescription Management', component: PrescriptionManagement },
+
   { path: '/staff', name: 'Staff Management', component: StaffManagement },
   { path: '/admin/products', name: 'Product Management', component: ProductManagement },
   { path: '/:pathMatch(.*)*', redirect: '/' } // Redirect any unmatched routes to Home

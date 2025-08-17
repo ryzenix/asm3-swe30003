@@ -204,7 +204,7 @@
                   <h4 class="text-blue-800 font-medium mb-2">Hướng dẫn tải lên đơn thuốc</h4>
                   <ul class="text-blue-700 text-sm space-y-1">
                     <li>• Đơn thuốc phải rõ ràng, không bị mờ hoặc che khuất</li>
-                    <li>• Chấp nhận định dạng: JPG, PNG, PDF (tối đa 10MB)</li>
+                    <li>• Chấp nhận định dạng: JPG, PNG (tối đa 10MB)</li>
                     <li>• Đơn thuốc phải còn hiệu lực (chưa quá 30 ngày)</li>
                     <li>• Có thể tải lên nhiều trang đơn thuốc nếu cần</li>
                   </ul>
@@ -247,7 +247,7 @@
                       Kéo thả file vào đây hoặc click để chọn file
                     </p>
                     <p class="text-xs text-gray-500">
-                      Hỗ trợ: JPG, PNG, PDF (Tối đa 10MB mỗi file)
+                      Hỗ trợ: JPG, PNG (Tối đa 10MB mỗi file)
                     </p>
                   </div>
 
@@ -264,7 +264,7 @@
                 <input 
                   ref="fileInput"
                   type="file" 
-                  accept="image/*,.pdf" 
+                  accept="image/jpeg,image/png" 
                   multiple
                   @change="handleFileSelect"
                   class="hidden"
@@ -306,8 +306,8 @@
                       <div v-else-if="file.type.startsWith('image/')" class="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center border border-blue-200">
                         <i class="fas fa-image text-blue-500 text-xl"></i>
                       </div>
-                      <div v-else class="w-16 h-16 bg-red-100 rounded-lg flex items-center justify-center border border-red-200">
-                        <i class="fas fa-file-pdf text-red-500 text-xl"></i>
+                      <div v-else class="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-200">
+                        <i class="fas fa-file text-gray-500 text-xl"></i>
                       </div>
                     </div>
                     
@@ -330,7 +330,7 @@
                   <!-- File Actions -->
                   <div class="mt-3 flex space-x-2">
                     <button 
-                      v-if="(file.type.startsWith('image/') && file.preview) || file.type === 'application/pdf'"
+                      v-if="file.type.startsWith('image/') && file.preview"
                       @click="previewFile(file)"
                       class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-md transition-colors duration-200"
                     >
@@ -413,9 +413,8 @@
               <p class="text-gray-600">Không thể hiển thị hình ảnh</p>
             </div>
             <div v-else class="text-center py-8">
-              <i class="fas fa-file-pdf text-red-500 text-4xl mb-4"></i>
-              <p class="text-gray-600">Không thể xem trước file PDF</p>
-              <p class="text-sm text-gray-500 mt-2">File sẽ được gửi kèm đơn hàng</p>
+              <i class="fas fa-file text-gray-400 text-4xl mb-4"></i>
+              <p class="text-gray-600">Không thể xem trước file này</p>
             </div>
           </div>
         </div>
@@ -426,6 +425,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { useToast } from '../../composables/useToast'
 
 const props = defineProps({
   show: {
@@ -439,6 +439,9 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close', 'submit'])
+
+// Toast functionality
+const { showError, showSuccess } = useToast()
 
 // Reactive state
 const dropZone = ref(null)
@@ -499,8 +502,8 @@ const handleFileSelect = (event) => {
 const processFiles = async (files) => {
   for (const file of files) {
     // Validate file type
-    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
-      error.value = `File ${file.name} không được hỗ trợ. Chỉ chấp nhận hình ảnh và PDF.`
+    if (!file.type.startsWith('image/')) {
+      error.value = `File ${file.name} không được hỗ trợ. Chỉ chấp nhận hình ảnh.`
       continue
     }
     
@@ -538,7 +541,7 @@ const processFiles = async (files) => {
       }
       reader.readAsDataURL(file)
     } else {
-      // For PDF files, add without preview
+      // For non-image files, add without preview
       const fileData = {
         name: file.name,
         size: file.size,
@@ -633,74 +636,80 @@ const handleSubmit = async () => {
     const { usePrescriptionApi } = await import('../../services/prescriptionApi.js')
     const { createPrescription, uploadPrescriptionImage } = usePrescriptionApi()
     
-    // Create prescription data
+    // Convert uploaded files to base64 for backend processing
+    const base64Images = []
+    if (uploadedFiles.value.length > 0) {
+      for (const fileData of uploadedFiles.value) {
+        if (fileData.preview && fileData.type.startsWith('image/')) {
+          base64Images.push(fileData.preview)
+        } else if (fileData.file) {
+          // Convert file to base64 if not already done
+          const base64 = await fileToBase64(fileData.file)
+          base64Images.push(base64)
+        }
+      }
+    }
+    
+    // Map prescription products to medication items that backend expects
+    const medicationItems = props.prescriptionProducts.map(product => ({
+      medicationName: product.title || product.name,
+      dosage: product.dosage || 'Theo chỉ định bác sĩ', // Default dosage
+      frequency: product.frequency || 'Theo chỉ định bác sĩ', // Default frequency
+      duration: product.duration || null,
+      quantity: product.quantity || 1,
+      instructions: product.instructions || null,
+      productId: product.id || null
+    }))
+    
+    // Create prescription data matching backend expectations
     const prescriptionData = {
       patientName: formData.value.patientName,
       doctorName: formData.value.doctorName,
-      doctorLicense: formData.value.doctorLicense,
-      clinicName: formData.value.clinicName,
+      doctorLicense: formData.value.doctorLicense || null,
+      clinicName: formData.value.clinicName || null,
       issueDate: formData.value.issueDate,
-      expiryDate: formData.value.expiryDate,
-      diagnosis: formData.value.diagnosis,
-      notes: formData.value.notes,
-      prescriptionProducts: props.prescriptionProducts
+      expiryDate: formData.value.expiryDate || null,
+      diagnosis: formData.value.diagnosis || null,
+      notes: formData.value.notes || null,
+      status: 'pending',
+      images: base64Images, // Send images as base64 array
+      items: medicationItems // Send as 'items' not 'prescriptionProducts'
     }
     
-    uploadProgress.value = 20
+    uploadProgress.value = 30
     
-    // Create prescription record
+    // Create prescription record with images
     const prescriptionResponse = await createPrescription(prescriptionData)
     
     if (!prescriptionResponse.success) {
       throw new Error(prescriptionResponse.error || 'Failed to create prescription')
     }
     
-    uploadProgress.value = 40
+    uploadProgress.value = 90
     
     const prescriptionId = prescriptionResponse.data.id
-    const uploadedImageUrls = []
     
-    // Upload images if any
-    if (uploadedFiles.value.length > 0) {
-      const totalFiles = uploadedFiles.value.length
-      
-      for (let i = 0; i < totalFiles; i++) {
-        const file = uploadedFiles.value[i]
-        
-        try {
-          const imageResponse = await uploadPrescriptionImage(prescriptionId, file.file)
-          
-          if (imageResponse.success) {
-            uploadedImageUrls.push({
-              name: file.name,
-              url: imageResponse.data.imageUrl,
-              type: file.type,
-              size: file.size
-            })
-          } else {
-            console.warn(`Failed to upload image ${file.name}:`, imageResponse.error)
-          }
-        } catch (imageError) {
-          console.warn(`Error uploading image ${file.name}:`, imageError)
-        }
-        
-        // Update progress
-        uploadProgress.value = 40 + ((i + 1) / totalFiles) * 50
-      }
-    } else {
-      uploadProgress.value = 90
-    }
+    // Prepare uploaded files info for frontend state
+    const uploadedImageUrls = prescriptionResponse.data.images || []
+    const fileInfos = uploadedFiles.value.map((fileData, index) => ({
+      name: fileData.name,
+      url: uploadedImageUrls[index] || null,
+      type: fileData.type,
+      size: fileData.size
+    }))
     
     uploadProgress.value = 100
+    
+    // Show success message
+    showSuccess('Đơn thuốc đã được tải lên thành công!')
     
     // Emit success with prescription data
     emit('submit', {
       prescriptionId: prescriptionId,
       prescriptionData: {
-        ...prescriptionData,
-        id: prescriptionId,
-        files: uploadedImageUrls,
-        uploadedAt: new Date().toISOString(),
+        ...prescriptionResponse.data,
+        files: fileInfos,
+        uploadedAt: prescriptionResponse.data.createdAt,
         validationStatus: 'pending'
       },
       prescriptionProducts: props.prescriptionProducts
@@ -708,11 +717,23 @@ const handleSubmit = async () => {
     
   } catch (err) {
     console.error('Upload error:', err)
-    error.value = err.message || 'Có lỗi xảy ra khi tải lên đơn thuốc. Vui lòng thử lại.'
+    const errorMessage = err.message || 'Có lỗi xảy ra khi tải lên đơn thuốc. Vui lòng thử lại.'
+    error.value = errorMessage
+    showError(errorMessage)
   } finally {
     uploading.value = false
     uploadProgress.value = 0
   }
+}
+
+// Helper function to convert file to base64
+const fileToBase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
 }
 
 // Watch for modal show/hide to reset form

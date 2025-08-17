@@ -179,7 +179,7 @@ const progressSteps = computed(() => {
       time: null
     },
     {
-      status: 'shipping',
+      status: 'shipped',
       title: 'Đang giao',
       icon: 'fas fa-truck',
       completed: false,
@@ -197,7 +197,7 @@ const progressSteps = computed(() => {
   ]
 
   // Update steps based on current status and history
-  const statusOrder = ['pending', 'confirmed', 'processing', 'shipping', 'delivered']
+  const statusOrder = ['pending', 'confirmed', 'processing', 'shipped', 'delivered']
   const currentIndex = statusOrder.indexOf(props.currentStatus)
 
   steps.forEach((step, index) => {
@@ -219,7 +219,7 @@ const progressSteps = computed(() => {
 
 // Progress percentage
 const progressPercentage = computed(() => {
-  const statusOrder = ['pending', 'confirmed', 'processing', 'shipping', 'delivered']
+  const statusOrder = ['pending', 'confirmed', 'processing', 'shipped', 'delivered']
   const currentIndex = statusOrder.indexOf(props.currentStatus)
   return (currentIndex / (statusOrder.length - 1)) * 100
 })
@@ -240,7 +240,7 @@ function getStatusIcon(status) {
     pending: 'fas fa-clock',
     confirmed: 'fas fa-check',
     processing: 'fas fa-cogs',
-    shipping: 'fas fa-truck',
+    shipped: 'fas fa-truck',
     delivered: 'fas fa-box-open',
     cancelled: 'fas fa-times'
   }

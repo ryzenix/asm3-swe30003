@@ -1,180 +1,69 @@
 // Order API Service
+import { useErrorHandler } from '../composables/useErrorHandler'
+
 const API_BASE_URL = 'http://localhost:3000'
 
 export function useOrderApi() {
+  const { makeStandardizedApiRequest } = useErrorHandler()
   // Get orders list with pagination and filters
   async function getOrdersList(params = {}) {
-    try {
-      const queryParams = new URLSearchParams()
-      
-      // Add pagination parameters
-      if (params.page) queryParams.append('page', params.page)
-      if (params.limit) queryParams.append('limit', params.limit)
-      
-      // Add filter parameters
-      if (params.search) queryParams.append('search', params.search)
-      if (params.status) queryParams.append('status', params.status)
-      if (params.deliveryType) queryParams.append('deliveryType', params.deliveryType)
-      if (params.dateFrom) queryParams.append('dateFrom', params.dateFrom)
-      if (params.dateTo) queryParams.append('dateTo', params.dateTo)
-      
-      const url = `${API_BASE_URL}/orders${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      })
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      return await response.json()
-    } catch (error) {
-      console.error('Get orders list error:', error)
-      return {
-        success: false,
-        error: error.message || 'Failed to fetch orders'
-      }
-    }
+    const queryParams = new URLSearchParams()
+    
+    // Add pagination parameters
+    if (params.page) queryParams.append('page', params.page)
+    if (params.limit) queryParams.append('limit', params.limit)
+    
+    // Add filter parameters
+    if (params.search) queryParams.append('search', params.search)
+    if (params.status) queryParams.append('status', params.status)
+    if (params.paymentStatus) queryParams.append('payment_status', params.paymentStatus)
+    if (params.dateFrom) queryParams.append('start_date', params.dateFrom)
+    if (params.dateTo) queryParams.append('end_date', params.dateTo)
+    
+    const url = `/orders${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+    
+    return await makeStandardizedApiRequest(`${API_BASE_URL}${url}`)
   }
 
   // Get single order details
   async function getOrderDetails(orderId) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      })
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      return await response.json()
-    } catch (error) {
-      console.error('Get order details error:', error)
-      return {
-        success: false,
-        error: error.message || 'Failed to fetch order details'
-      }
-    }
+    return await makeStandardizedApiRequest(`${API_BASE_URL}/orders/${orderId}`)
   }
 
   // Update order status
   async function updateOrderStatus(orderId, statusData) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(statusData)
-      })
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      return await response.json()
-    } catch (error) {
-      console.error('Update order status error:', error)
-      return {
-        success: false,
-        error: error.message || 'Failed to update order status'
-      }
-    }
+    return await makeStandardizedApiRequest(`${API_BASE_URL}/orders/${orderId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(statusData)
+    })
   }
 
   // Cancel order
   async function cancelOrder(orderId, cancelData) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/cancel`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(cancelData)
-      })
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      return await response.json()
-    } catch (error) {
-      console.error('Cancel order error:', error)
-      return {
-        success: false,
-        error: error.message || 'Failed to cancel order'
-      }
-    }
+    return await makeStandardizedApiRequest(`${API_BASE_URL}/orders/${orderId}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify(cancelData)
+    })
   }
 
   // Update delivery information
   async function updateDeliveryInfo(orderId, deliveryData) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/delivery`, {
-        method: 'PUT',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(deliveryData)
-      })
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      return await response.json()
-    } catch (error) {
-      console.error('Update delivery info error:', error)
-      return {
-        success: false,
-        error: error.message || 'Failed to update delivery information'
-      }
-    }
+    return await makeStandardizedApiRequest(`${API_BASE_URL}/orders/${orderId}/delivery`, {
+      method: 'PUT',
+      body: JSON.stringify(deliveryData)
+    })
   }
 
   // Get order statistics
   async function getOrderStatistics(params = {}) {
-    try {
-      const queryParams = new URLSearchParams()
-      
-      if (params.dateFrom) queryParams.append('dateFrom', params.dateFrom)
-      if (params.dateTo) queryParams.append('dateTo', params.dateTo)
-      
-      const url = `${API_BASE_URL}/orders/admin/statistics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      })
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      return await response.json()
-    } catch (error) {
-      console.error('Get order statistics error:', error)
-      return {
-        success: false,
-        error: error.message || 'Failed to fetch order statistics'
-      }
-    }
+    const queryParams = new URLSearchParams()
+    
+    if (params.dateFrom) queryParams.append('dateFrom', params.dateFrom)
+    if (params.dateTo) queryParams.append('dateTo', params.dateTo)
+    
+    const url = `/orders/admin/statistics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+    
+    return await makeStandardizedApiRequest(`${API_BASE_URL}${url}`)
   }
 
   return {

@@ -5,8 +5,11 @@ import {
     onUnmounted,
     nextTick
 } from 'vue'
+import { useErrorHandler } from './useErrorHandler'
 
 export function useAuth() {
+    const { makeApiRequest } = useErrorHandler()
+    
     // Reactive state
     const isLoggedIn = ref(false)
     const isLoading = ref(false) // Add loading state for session check
@@ -21,16 +24,14 @@ export function useAuth() {
     })
 
     // Check authentication status by querying the server
-    const checkSession = async () => {
+const checkSession = async () => {
         isLoading.value = true // Set loading to true when starting session check
         try {
-            const response = await fetch('http://localhost:3000/auth/session', {
-                method: 'GET',
-                credentials: 'include' // Include session cookies
+            const data = await makeApiRequest('http://localhost:3000/auth/session', {
+                method: 'GET'
             })
-            const data = await response.json()
 
-            if (response.ok && data.authenticated) {
+            if (data.authenticated) {
                 isLoggedIn.value = true
                 user.value = {
                     id: data.user.id,
@@ -92,13 +93,11 @@ export function useAuth() {
                 dateOfBirth: ''
             }
             console.log('Auth: Starting logout process, updating local state. isLoggedIn:', isLoggedIn.value, 'user:', user.value)
-            const response = await fetch('http://localhost:3000/auth/logout', {
-                method: 'POST',
-                credentials: 'include' // Include session cookies
+            const data = await makeApiRequest('http://localhost:3000/auth/logout', {
+                method: 'POST'
             })
-            const data = await response.json()
 
-            if (response.ok && data.success) {
+            if (data.success) {
 
                 console.log("Auth: Server logout successful")
             } else {
@@ -112,8 +111,20 @@ export function useAuth() {
 
     // Force login state update - useful after successful authentication
     const forceLoginStateUpdate = async () => {
+        console.log('useAuth: forceLoginStateUpdate called')
         const result = await checkSession()
         await nextTick()
+        
+        // Force reactivity update
+        isLoggedIn.value = isLoggedIn.value
+        user.value = { ...user.value }
+        
+        console.log('useAuth: forceLoginStateUpdate completed', {
+            result,
+            isLoggedIn: isLoggedIn.value,
+            user: user.value
+        })
+        
         return result
     }
 

@@ -50,7 +50,7 @@
               <option value="pending">Chờ xác nhận</option>
               <option value="confirmed">Đã xác nhận</option>
               <option value="processing">Đang chuẩn bị</option>
-              <option value="shipping">Đang giao hàng</option>
+              <option value="shipped">Đã gửi hàng</option>
               <option value="delivered">Đã giao hàng</option>
               <option value="cancelled">Đã hủy</option>
             </select>
@@ -69,9 +69,6 @@
               <option value="">Tất cả đơn thuốc</option>
               <option value="has_prescription">Có đơn thuốc</option>
               <option value="no_prescription">Không có đơn thuốc</option>
-              <option value="pending_validation">Chờ xác thực</option>
-              <option value="approved">Đã xác thực</option>
-              <option value="rejected">Bị từ chối</option>
             </select>
             <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
               <i class="fas fa-chevron-down text-gray-400 text-sm"></i>
@@ -139,7 +136,7 @@
           </div>
           <div class="text-center">
             <div class="text-2xl font-bold text-pink-600">{{ pendingPrescriptions }}</div>
-            <div class="text-sm text-gray-600">Chờ xác thực</div>
+            <div class="text-sm text-gray-600">Đơn thuốc chờ xử lý</div>
           </div>
         </div>
       </section>
@@ -364,7 +361,7 @@
     <PrescriptionValidationModal
       :show="showPrescriptionModal"
       :order="selectedOrder"
-      :saving="saving"
+      :saving="saving || prescriptionLoading"
       :error="modalError"
       @close="closePrescriptionModal"
       @validate="confirmPrescriptionValidation"
@@ -380,6 +377,9 @@ import StatusChangeModal from '../components/OrderManagement/StatusChangeModal.v
 import CancelOrderModal from '../components/OrderManagement/CancelOrderModal.vue'
 import PrescriptionValidationModal from '../components/OrderManagement/PrescriptionValidationModal.vue'
 import { useOrderApi } from '../services/orderApi.js'
+import { usePrescriptionApi } from '../services/prescriptionApi.js'
+import { useErrorDisplay } from '../composables/useErrorDisplay.js'
+import { useToast } from '../composables/useToast'
 
 const router = useRouter()
 
@@ -392,6 +392,7 @@ const loading = ref(false)
 const saving = ref(false)
 const error = ref('')
 const modalError = ref('')
+const prescriptionLoading = ref(false)
 
 // API Data
 const ordersList = ref([])
@@ -420,6 +421,9 @@ let searchTimeout = null
 
 // ===== API SERVICE =====
 const { getOrdersList, updateOrderStatus, cancelOrder } = useOrderApi()
+const { getPrescriptionDetails, getUserPrescriptions, updatePrescriptionStatus } = usePrescriptionApi()
+const { showErrorToast, handleApiErrorWithToast } = useErrorDisplay()
+const { showSuccess } = useToast()
 
 // ===== COMPUTED PROPERTIES =====
 const hasActiveFilters = computed(() => {
@@ -475,11 +479,49 @@ const visiblePages = computed(() => {
 // Statistics - computed from current orders list
 const pendingOrders = computed(() => ordersList.value.filter(o => o.status === 'pending').length)
 const processingOrders = computed(() => ordersList.value.filter(o => ['confirmed', 'processing'].includes(o.status)).length)
-const shippingOrders = computed(() => ordersList.value.filter(o => o.status === 'shipping').length)
+const shippingOrders = computed(() => ordersList.value.filter(o => o.status === 'shipped').length)
 const deliveredOrders = computed(() => ordersList.value.filter(o => o.status === 'delivered').length)
 const cancelledOrders = computed(() => ordersList.value.filter(o => o.status === 'cancelled').length)
-const prescriptionOrders = computed(() => ordersList.value.filter(o => o.prescriptionData).length)
-const pendingPrescriptions = computed(() => ordersList.value.filter(o => o.prescriptionData?.validationStatus === 'pending').length)
+const prescriptionOrders = computed(() => ordersList.value.filter(o => o.prescriptionId).length)
+const pendingPrescriptions = computed(() => ordersList.value.filter(o => o.prescriptionId && o.prescriptionData?.validationStatus === 'pending').length)
+
+// ===== DATA TRANSFORMATION =====
+function transformOrderData(apiOrder) {
+  // Transform API response to match OrderCard component expectations
+  return {
+    id: apiOrder.id,
+    orderNumber: apiOrder.orderNumber || apiOrder.id?.toString() || 'N/A',
+    date: apiOrder.createdAt || apiOrder.date || new Date().toISOString(),
+    status: apiOrder.status || 'pending',
+    deliveryType: apiOrder.shippingMethod || apiOrder.deliveryType || 'standard',
+    customerInfo: {
+      name: apiOrder.customerName || apiOrder.user?.name || apiOrder.user?.fullName || 'Unknown Customer',
+      phone: apiOrder.customerPhone || apiOrder.user?.phone || 'N/A',
+      address: apiOrder.shippingAddress || apiOrder.address || 'N/A'
+    },
+    items: apiOrder.items || apiOrder.orderItems || [{
+      id: 1,
+      name: 'Product',
+      quantity: apiOrder.itemCount || 1,
+      price: parseFloat(apiOrder.totalAmount || 0),
+      requiresPrescription: apiOrder.prescriptionRequired || false
+    }],
+    pricing: {
+      subtotal: parseFloat(apiOrder.totalAmount || 0),
+      total: parseFloat(apiOrder.totalAmount || 0)
+    },
+    // Add prescriptionId directly to order object for easy access
+    prescriptionId: apiOrder.prescriptionId || null,
+    prescriptionData: apiOrder.prescriptionRequired ? {
+      id: apiOrder.prescriptionId || null,
+      files: [],
+      uploadedAt: apiOrder.createdAt,
+      expiryDate: null,
+      validationStatus: apiOrder.prescription?.status || 'pending',
+      validationInfo: null
+    } : null
+  }
+}
 
 // ===== API METHODS =====
 async function fetchOrders() {
@@ -516,9 +558,19 @@ async function fetchOrders() {
     // Use real API
     const data = await getOrdersList(params)
     if (data.success) {
-      ordersList.value = data.data.orders || []
+      // Transform API data to match OrderCard expectations
+      const rawOrders = data.data.orders || data.data || []
+      ordersList.value = rawOrders.map(transformOrderData)
+      
       apiData.value = {
-        pagination: data.data.pagination || { totalRecords: 0, currentPage: 1, totalPages: 1, limit: 10, hasPrevPage: false, hasNextPage: false },
+        pagination: data.data.pagination || data.pagination || { 
+          totalRecords: rawOrders.length, 
+          currentPage: params.page || 1, 
+          totalPages: Math.ceil(rawOrders.length / (params.limit || 10)), 
+          limit: params.limit || 10, 
+          hasPrevPage: (params.page || 1) > 1, 
+          hasNextPage: (params.page || 1) < Math.ceil(rawOrders.length / (params.limit || 10))
+        },
         filters: data.data.filters || {}
       }
     } else {
@@ -534,209 +586,12 @@ async function fetchOrders() {
     // }
   } catch (err) {
     console.error('Fetch orders error:', err)
-    error.value = err.message || 'Có lỗi xảy ra khi tải danh sách đơn hàng'
+    const errorInfo = handleApiErrorWithToast(err, 'Fetch orders', 'Không thể tải danh sách đơn hàng')
+    error.value = errorInfo.message
     ordersList.value = []
     apiData.value = { pagination: null, filters: {} }
   } finally {
     loading.value = false
-  }
-}
-
-// Mock data generator for demo
-function generateMockOrders(params) {
-  const mockOrders = [
-    {
-      id: 1,
-      orderNumber: '5276043',
-      date: '2025-08-04',
-      status: 'processing',
-      deliveryType: 'grab',
-      customerInfo: {
-        name: 'Hoang The Hieu',
-        phone: '08xx xxx 667',
-        address: 'xxx, Phường Xuân Khánh, Quận Ninh Kiều, Cần Thơ'
-      },
-      items: [
-        { id: 1, name: 'Listerine Tartar Control', quantity: 2, price: 187000, requiresPrescription: false },
-        { id: 2, name: 'Probiotics bổ sung men tiêu hóa', quantity: 1, price: 163850, requiresPrescription: false }
-      ],
-      pricing: {
-        subtotal: 537850,
-        total: 537850
-      }
-    },
-    {
-      id: 2,
-      orderNumber: '5276044',
-      date: '2025-08-04',
-      status: 'pending',
-      deliveryType: 'standard',
-      customerInfo: {
-        name: 'Nguyen Van A',
-        phone: '0901234567',
-        address: 'Quận 1, TP.HCM'
-      },
-      items: [
-        { id: 3, name: 'Thuốc kháng sinh Amoxicillin 500mg', quantity: 1, price: 85000, requiresPrescription: true },
-        { id: 4, name: 'Paracetamol 500mg', quantity: 1, price: 25000, requiresPrescription: false }
-      ],
-      pricing: {
-        subtotal: 110000,
-        total: 110000
-      },
-      prescriptionData: {
-        files: [
-          {
-            name: 'don-thuoc-nguyen-van-a.jpg',
-            type: 'image/jpeg',
-            size: 2048576,
-            url: '/img/prescription-sample-1.jpg'
-          }
-        ],
-        uploadedAt: '2025-08-04T15:30:00Z',
-        expiryDate: '2025-09-04T00:00:00Z',
-        validationStatus: 'pending',
-        validationInfo: null
-      }
-    },
-    {
-      id: 3,
-      orderNumber: '5276045',
-      date: '2025-08-03',
-      status: 'delivered',
-      deliveryType: 'express',
-      customerInfo: {
-        name: 'Tran Thi B',
-        phone: '0987654321',
-        address: 'Quận 3, TP.HCM'
-      },
-      items: [
-        { id: 5, name: 'Thuốc giảm đau Tramadol 50mg', quantity: 2, price: 120000, requiresPrescription: true },
-        { id: 6, name: 'Vitamin C 1000mg', quantity: 2, price: 150000, requiresPrescription: false }
-      ],
-      pricing: {
-        subtotal: 390000,
-        total: 390000
-      },
-      prescriptionData: {
-        files: [
-          {
-            name: 'don-thuoc-tran-thi-b.pdf',
-            type: 'application/pdf',
-            size: 1536000,
-            url: '/img/prescription-sample-2.pdf'
-          }
-        ],
-        uploadedAt: '2025-08-03T10:15:00Z',
-        expiryDate: '2025-09-03T00:00:00Z',
-        validationStatus: 'approved',
-        validationInfo: {
-          pharmacistName: 'Dược sĩ Nguyễn Văn C',
-          validatedAt: '2025-08-03T10:30:00Z',
-          notes: 'Đơn thuốc hợp lệ, đã kiểm tra thông tin bệnh nhân và liều lượng.'
-        }
-      }
-    },
-    {
-      id: 4,
-      orderNumber: '5276046',
-      date: '2025-08-02',
-      status: 'cancelled',
-      deliveryType: 'standard',
-      customerInfo: {
-        name: 'Le Van D',
-        phone: '0912345678',
-        address: 'Quận 7, TP.HCM'
-      },
-      items: [
-        { id: 7, name: 'Thuốc an thần Diazepam 5mg', quantity: 1, price: 95000, requiresPrescription: true }
-      ],
-      pricing: {
-        subtotal: 95000,
-        total: 95000
-      },
-      prescriptionData: {
-        files: [
-          {
-            name: 'don-thuoc-le-van-d.jpg',
-            type: 'image/jpeg',
-            size: 1800000,
-            url: '/img/prescription-sample-3.jpg'
-          }
-        ],
-        uploadedAt: '2025-08-02T14:20:00Z',
-        expiryDate: '2025-09-02T00:00:00Z',
-        validationStatus: 'rejected',
-        validationInfo: {
-          pharmacistName: 'Dược sĩ Trần Thị E',
-          validatedAt: '2025-08-02T14:45:00Z',
-          notes: 'Đơn thuốc không rõ ràng, chữ ký bác sĩ không hợp lệ. Yêu cầu khách hàng cung cấp đơn thuốc mới.'
-        }
-      }
-    }
-  ]
-
-  // Apply filters
-  let filteredOrders = mockOrders
-  
-  if (params.search) {
-    filteredOrders = filteredOrders.filter(order => 
-      order.orderNumber.includes(params.search) ||
-      order.customerInfo.name.toLowerCase().includes(params.search.toLowerCase())
-    )
-  }
-  
-  if (params.status) {
-    filteredOrders = filteredOrders.filter(order => order.status === params.status)
-  }
-  
-  if (params.deliveryType) {
-    filteredOrders = filteredOrders.filter(order => order.deliveryType === params.deliveryType)
-  }
-
-  if (params.prescriptionStatus) {
-    switch (params.prescriptionStatus) {
-      case 'has_prescription':
-        filteredOrders = filteredOrders.filter(order => order.prescriptionData)
-        break
-      case 'no_prescription':
-        filteredOrders = filteredOrders.filter(order => !order.prescriptionData)
-        break
-      case 'pending_validation':
-        filteredOrders = filteredOrders.filter(order => order.prescriptionData?.validationStatus === 'pending')
-        break
-      case 'approved':
-        filteredOrders = filteredOrders.filter(order => order.prescriptionData?.validationStatus === 'approved')
-        break
-      case 'rejected':
-        filteredOrders = filteredOrders.filter(order => order.prescriptionData?.validationStatus === 'rejected')
-        break
-    }
-  }
-
-  // Pagination
-  const page = params.page || 1
-  const limit = params.limit || 10
-  const totalRecords = filteredOrders.length
-  const totalPages = Math.ceil(totalRecords / limit)
-  const startIndex = (page - 1) * limit
-  const endIndex = startIndex + limit
-  const paginatedOrders = filteredOrders.slice(startIndex, endIndex)
-
-  return {
-    success: true,
-    data: {
-      orders: paginatedOrders,
-      pagination: {
-        currentPage: page,
-        totalPages,
-        totalRecords,
-        limit,
-        hasPrevPage: page > 1,
-        hasNextPage: page < totalPages
-      },
-      filters: params
-    }
   }
 }
 
@@ -818,10 +673,61 @@ function closeCancelModal() {
   modalError.value = ''
 }
 
-function openPrescriptionModal(order) {
+async function openPrescriptionModal(order) {
   selectedOrder.value = order
   modalError.value = ''
   showPrescriptionModal.value = true
+  
+  // Fetch prescription details if order has prescription
+  if (order.prescriptionId) {
+    try {
+      prescriptionLoading.value = true
+      
+      // Get prescription ID directly from order object
+      const prescriptionId = order.prescriptionId
+      
+      if (prescriptionId) {
+        const response = await getPrescriptionDetails(prescriptionId)
+        
+        if (response.success && response.data) {
+          // Update the selected order with real prescription data
+          selectedOrder.value = {
+            ...selectedOrder.value,
+            prescriptionData: {
+              ...selectedOrder.value.prescriptionData,
+              id: prescriptionId,
+              images: response.data.images || [],
+              createdAt: response.data.createdAt,
+              expiryDate: response.data.expiryDate,
+              validationStatus: response.data.status || 'pending',
+              validationInfo: response.data.reviewedBy ? {
+                pharmacistName: response.data.reviewedBy,
+                validatedAt: response.data.reviewedAt,
+                notes: response.data.reviewNotes
+              } : null,
+              patientName: response.data.patientName,
+              doctorName: response.data.doctorName,
+              doctorLicense: response.data.doctorLicense,
+              clinicName: response.data.clinicName,
+              issueDate: response.data.issueDate,
+              notes: response.data.notes,
+              diagnosis: response.data.diagnosis,
+              items: response.data.items || []
+            }
+          }
+        } else {
+          modalError.value = 'Không tìm thấy thông tin đơn thuốc.'
+        }
+      } else {
+        modalError.value = 'Không tìm thấy ID đơn thuốc.'
+      }
+    } catch (error) {
+      console.error('Failed to fetch prescription details:', error)
+      modalError.value = 'Không thể tải thông tin đơn thuốc. Vui lòng thử lại.'
+    } finally {
+      prescriptionLoading.value = false
+    }
+  }
 }
 
 function closePrescriptionModal() {
@@ -840,7 +746,7 @@ async function confirmStatusChange(statusData) {
     // Use real API
     const data = await updateOrderStatus(selectedOrder.value.id, statusData)
     if (data.success) {
-      showToast(`Đã cập nhật trạng thái đơn hàng #${selectedOrder.value.orderNumber} thành công!`, 'success')
+      showSuccess(`Đã cập nhật trạng thái đơn hàng #${selectedOrder.value.orderNumber} thành công!`)
       await fetchOrders()
       closeStatusModal()
     } else {
@@ -857,7 +763,8 @@ async function confirmStatusChange(statusData) {
     // closeStatusModal()
   } catch (err) {
     console.error('Update status error:', err)
-    modalError.value = err.message || 'Có lỗi xảy ra khi cập nhật trạng thái đơn hàng'
+    const errorInfo = handleApiErrorWithToast(err, 'Update order status', 'Không thể cập nhật trạng thái đơn hàng')
+    modalError.value = errorInfo.message
   } finally {
     saving.value = false
   }
@@ -873,7 +780,7 @@ async function confirmCancelOrder(cancelData) {
     // Use real API
     const data = await cancelOrder(selectedOrder.value.id, cancelData)
     if (data.success) {
-      showToast(`Đã hủy đơn hàng #${selectedOrder.value.orderNumber} thành công!`, 'success')
+      showSuccess(`Đã hủy đơn hàng #${selectedOrder.value.orderNumber} thành công!`)
       await fetchOrders()
       closeCancelModal()
     } else {
@@ -890,7 +797,54 @@ async function confirmCancelOrder(cancelData) {
     // closeCancelModal()
   } catch (err) {
     console.error('Cancel order error:', err)
-    modalError.value = err.message || 'Có lỗi xảy ra khi hủy đơn hàng'
+    const errorInfo = handleApiErrorWithToast(err, 'Cancel order', 'Không thể hủy đơn hàng')
+    modalError.value = errorInfo.message
+  } finally {
+    saving.value = false
+  }
+}
+
+async function confirmPrescriptionValidation(validationData) {
+  if (!selectedOrder.value) return
+  
+  // Handle error from the modal
+  if (validationData.error) {
+    modalError.value = validationData.error
+    return
+  }
+  
+  saving.value = true
+  modalError.value = ''
+  
+  try {
+    // Get prescription ID from order data
+    const prescriptionId = selectedOrder.value.prescriptionId || selectedOrder.value.prescriptionData?.id
+    
+    if (!prescriptionId) {
+      throw new Error('Không tìm thấy ID đơn thuốc')
+    }
+    
+    // Use the correct prescription API for validation
+    const data = await updatePrescriptionStatus(prescriptionId, {
+      status: validationData.status,
+      reviewNotes: validationData.notes,
+      reviewedBy: validationData.pharmacistName
+    })
+    
+    if (data.success) {
+      showSuccess(`Đã xác thực đơn thuốc cho đơn hàng #${selectedOrder.value.orderNumber} thành công!`)
+      await fetchOrders()
+      closePrescriptionModal()
+    } else {
+      throw new Error(data.error || 'Failed to validate prescription')
+    }
+    
+  } catch (error) {
+    console.error('Validate prescription error:', error)
+    
+    // Use standardized error handling to get the proper message
+    const errorInfo = handleApiErrorWithToast(error, 'Prescription validation', 'Không thể xác thực đơn thuốc')
+    modalError.value = errorInfo.message
   } finally {
     saving.value = false
   }
@@ -898,36 +852,7 @@ async function confirmCancelOrder(cancelData) {
 
 
 
-function showToast(message, type = 'success') {
-  const toast = document.createElement('div')
-  const bgColor = type === 'success' ? 'bg-green-600' : 'bg-red-600'
-  const icon = type === 'success' ? 'fas fa-check' : 'fas fa-exclamation-triangle'
-  
-  toast.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-xl shadow-lg z-50 transform transition-all duration-300 flex items-center space-x-3`
-  toast.innerHTML = `
-    <i class="${icon}"></i>
-    <span>${message}</span>
-  `
-  
-  document.body.appendChild(toast)
-  
-  // Animate in
-  setTimeout(() => {
-    toast.style.transform = 'translateX(0)'
-    toast.style.opacity = '1'
-  }, 100)
-  
-  // Remove toast after 3 seconds
-  setTimeout(() => {
-    toast.style.transform = 'translateX(100%)'
-    toast.style.opacity = '0'
-    setTimeout(() => {
-      if (document.body.contains(toast)) {
-        document.body.removeChild(toast)
-      }
-    }, 300)
-  }, 3000)
-}
+
 
 // ===== LIFECYCLE =====
 onMounted(() => {

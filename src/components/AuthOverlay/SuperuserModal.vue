@@ -27,15 +27,7 @@
       <p class="text-sm text-gray-500">Xác thực bằng Passkey</p>
     </div>
 
-    <!-- Status Message -->
-    <div v-if="statusMessage" :class="[
-        'message p-4 rounded-lg mb-4 text-sm',
-        statusType === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : '',
-        statusType === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : '',
-        statusType === 'info' ? 'bg-blue-50 text-blue-700 border border-blue-200' : ''
-      ]">
-      {{ statusMessage }}
-    </div>
+
 
     <!-- Success State -->
     <div v-if="isLoggedIn" class="text-center">
@@ -107,6 +99,8 @@
   import {
     useAuth
   } from '../../composables/useAuth.js'
+  import { useErrorHandler } from '../../composables/useErrorHandler.js'
+  import { useToast } from '../../composables/useToast.js'
 
   const props = defineProps({
     isLoggedIn: Boolean,
@@ -115,8 +109,6 @@
   const emit = defineEmits(['back', 'close', 'auth-success'])
 
   // Reactive state
-  const statusMessage = ref('')
-  const statusType = ref('info')
   const isAuthenticating = ref(false)
   const isWebAuthnSupported = ref(false)
   const hasStoredCredentials = ref(false)
@@ -126,6 +118,12 @@
     checkSession,
     forceLoginStateUpdate
   } = useAuth()
+  
+  // Use error handler
+  const { makeApiRequest, handleApiError } = useErrorHandler()
+  
+  // Use toast notifications
+  const { showSuccess, showError, showInfo } = useToast()
 
   // Base64 URL encoding/decoding utilities
   function base64urlEncode(buffer) {
@@ -143,40 +141,30 @@
     return Uint8Array.from(binary, c => c.charCodeAt(0));
   }
 
-  // Update status message
-  const updateStatus = (message, type) => {
-    statusMessage.value = message
-    statusType.value = type
-  }
+
 
   // Generate authentication challenge
   const generateChallenge = async () => {
-    const challengeRes = await fetch('http://localhost:3000/auth/superuser/login-challenge', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      // body: JSON.stringify({
-      //     email
-      // }),
-      credentials: 'include'
-    });
-    if (!challengeRes.ok) {
-      const errorData = await challengeRes.json();
-      throw new Error(errorData.error || 'Gặp lỗi khi lấy challenge để xác thực');
+    try {
+      return await makeApiRequest('http://localhost:3000/auth/superuser/login-challenge', {
+        method: 'POST'
+      });
+    } catch (error) {
+      // Error is already handled by makeApiRequest, just re-throw
+      throw error;
     }
-    const challengeData = await challengeRes.json();
-    return challengeData;
   }
 
   // Authenticate superuser with passkey
   const authenticateSuperuser = async () => {
     try {
       isAuthenticating.value = true
-      updateStatus('Bắt đầu xác thực...', 'info')
+      showInfo('Bắt đầu xác thực...')
 
       // Get challenge
       const challengeData = await generateChallenge();
+
+      console.log('challengeData', challengeData);
 
       const publicKeyCredentialRequestOptions = {
         ...challengeData,
@@ -187,7 +175,7 @@
         }))
       }
 
-      updateStatus('Vui lòng xác thực với passkey của bạn...', 'info');
+      showInfo('Vui lòng xác thực với passkey của bạn...');
 
       const credential = await navigator.credentials.get({
         publicKey: publicKeyCredentialRequestOptions
@@ -197,7 +185,7 @@
         throw new Error('Authentication was cancelled');
       }
 
-      updateStatus('Đang xác thực mã khóa...', 'info');
+      showInfo('Đang xác thực mã khóa...');
 
       const authData = {
         id: credential.id,
@@ -211,33 +199,33 @@
         type: credential.type
       };
 
-      const verifyResponse = await fetch('http://localhost:3000/auth/superuser/login', {
+      const result = await makeApiRequest('http://localhost:3000/auth/superuser/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(authData),
-        credentials: 'include'
+        body: JSON.stringify(authData)
       });
 
-      if (!verifyResponse.ok) {
-        const errorData = await verifyResponse.json();
-        throw new Error(errorData.error || 'Gặp lỗi khi xác thực mã khóa.');
-      }
-
-      const result = await verifyResponse.json();
-
-      if (result.success) {
-        updateStatus('Xác thực thành công! Chào mừng bạn trở lại!', 'success');
-        // await forceLoginStateUpdate();
-        emit('close');
-        emit('auth-success');
-      } else {
-        throw new Error(result.error || 'Mã khóa không hợp lệ.');
-      }
+      // With standardized response, success is indicated by no error being thrown
+      showSuccess('Xác thực thành công! Chào mừng bạn trở lại!');
+      emit('close');
+      emit('auth-success');
     } catch (error) {
       console.error('Authentication error:', error);
-      updateStatus(`Xác thực thất bại: ${error.message}`, 'error');
+      
+      // Handle WebAuthn specific errors
+      if (error.name === 'NotAllowedError') {
+        showError('Xác thực bị hủy bỏ hoặc bị từ chối');
+      } else if (error.name === 'InvalidStateError') {
+        showError('Passkey không khả dụng. Vui lòng thử lại');
+      } else if (error.name === 'NotSupportedError') {
+        showError('Passkey không được hỗ trợ trên thiết bị này');
+      } else if (error.errorInfo) {
+        // Extract and display the error message from the standardized response
+        const errorMessage = error.errorInfo.message || 'Xác thực thất bại';
+        showError(errorMessage);
+      } else {
+        // Fallback for unexpected errors
+        showError('Xác thực thất bại. Vui lòng thử lại');
+      }
     } finally {
       isAuthenticating.value = false;
     }
@@ -247,14 +235,14 @@
   onMounted(async () => {
     isWebAuthnSupported.value = !!window.PublicKeyCredential;
     if (!isWebAuthnSupported.value) {
-      updateStatus('WebAuthn không được hỗ trợ trong trình duyệt này', 'error');
+      showError('WebAuthn không được hỗ trợ trong trình duyệt này');
       return;
     }
 
     // Check login status and credentials
     await checkSession();
     if (!props.isLoggedIn || !hasStoredCredentials.value) {
-      updateStatus('Vui lòng đăng nhập bằng passkey của bạn (Face ID, Touch ID)', 'error');
+      showInfo('Vui lòng đăng nhập bằng passkey của bạn (Face ID, Touch ID)');
       return;
     }
   });

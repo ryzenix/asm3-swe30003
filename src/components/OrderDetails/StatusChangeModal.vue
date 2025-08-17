@@ -163,8 +163,8 @@ const statusConfigs = {
     class: 'bg-orange-100 text-orange-800 border border-orange-200',
     dotClass: 'bg-orange-500'
   },
-  shipping: {
-    text: 'Đang giao hàng',
+  shipped: {
+    text: 'Đã gửi hàng',
     class: 'bg-purple-100 text-purple-800 border border-purple-200',
     dotClass: 'bg-purple-500'
   },
@@ -221,7 +221,7 @@ const availableStatuses = computed(() => {
     ],
     processing: [
       {
-        value: 'shipping',
+        value: 'shipped',
         text: 'Bắt đầu giao hàng',
         description: 'Đơn hàng đã sẵn sàng và bắt đầu giao',
         icon: 'fas fa-truck',
@@ -235,7 +235,7 @@ const availableStatuses = computed(() => {
         iconClass: 'bg-red-100 text-red-600'
       }
     ],
-    shipping: [
+    shipped: [
       {
         value: 'delivered',
         text: 'Đã giao hàng',

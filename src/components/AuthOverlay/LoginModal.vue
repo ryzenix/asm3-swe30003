@@ -263,9 +263,18 @@
 
 <script setup>
 import { ref, computed, onUnmounted } from 'vue'
+import { useToast } from '../../composables/useToast'
 import { useErrorHandler } from '../../composables/useErrorHandler'
 
+const props = defineProps({
+  autoClose: {
+    type: Boolean,
+    default: true
+  }
+})
+
 const emit = defineEmits(['switch', 'close', 'manager-login', 'auth-success'])
+const { showSuccess, showError, showInfo } = useToast()
 
 // Use centralized error handler
 const {
@@ -496,8 +505,13 @@ const handleLogin = async () => {
     isBlocked.value = false
     resetForm()
     
+    // Emit auth-success first
     emit('auth-success')
-    emit('close')
+    
+    // Auto-close if enabled (default behavior)
+    if (props.autoClose) {
+      emit('close')
+    }
     
   } catch (error) {
     console.error('Login error:', error)
@@ -509,7 +523,7 @@ const handleLogin = async () => {
 
 // Forgot password handler
 const handleForgotPassword = () => {
-  alert('Tính năng quên mật khẩu sẽ được triển khai sớm!')
+  showInfo('Tính năng quên mật khẩu sẽ được triển khai sớm!')
   console.log('Forgot password clicked')
 }
 

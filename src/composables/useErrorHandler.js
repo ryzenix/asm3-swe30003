@@ -76,13 +76,15 @@ export function useErrorHandler() {
   };
 
   /**
-   * Parse API error response according to new format
+   * Parse API error response according to new standardized format
    * @param {ApiErrorResponse|Object} errorResponse - The error response from API
    * @returns {Object} Parsed error object with code, message, details
    */
   const parseApiErrorResponse = (errorResponse) => {
-    // New API format: { success: false, error: { code, message, details, timestamp } }
-    if (errorResponse && errorResponse.error) {
+    console.log('Parsing API error response:', errorResponse);
+    
+    // New standardized API format: { success: false, error: { code, message, details, timestamp } }
+    if (errorResponse && errorResponse.success === false && errorResponse.error) {
       return {
         code: errorResponse.error.code || ERROR_CODES.UNKNOWN_ERROR,
         message: errorResponse.error.message || '',
@@ -91,10 +93,40 @@ export function useErrorHandler() {
       };
     }
     
-    // Fallback for legacy or malformed responses
+    // Handle direct error object (legacy format)
+    if (errorResponse && errorResponse.error && typeof errorResponse.error === 'object') {
+      return {
+        code: errorResponse.error.code || ERROR_CODES.UNKNOWN_ERROR,
+        message: errorResponse.error.message || errorResponse.error.error || '',
+        details: errorResponse.error.details || null,
+        timestamp: errorResponse.error.timestamp || null
+      };
+    }
+    
+    // Handle legacy formats
+    if (errorResponse && errorResponse.code) {
+      return {
+        code: errorResponse.code,
+        message: errorResponse.message || '',
+        details: errorResponse.details || null,
+        timestamp: errorResponse.timestamp || null
+      };
+    }
+    
+    // Handle string error messages
+    if (typeof errorResponse === 'string') {
+      return {
+        code: ERROR_CODES.UNKNOWN_ERROR,
+        message: errorResponse,
+        details: null,
+        timestamp: null
+      };
+    }
+    
+    // Fallback for any other format
     return {
-      code: errorResponse?.code || ERROR_CODES.UNKNOWN_ERROR,
-      message: errorResponse?.message || errorResponse?.error || '',
+      code: ERROR_CODES.UNKNOWN_ERROR,
+      message: errorResponse?.message || errorResponse?.error || 'Có lỗi xảy ra',
       details: errorResponse?.details || null,
       timestamp: null
     };
@@ -177,13 +209,14 @@ export function useErrorHandler() {
    */
   const handleApiError = (error, response = null) => {
     console.error('API Error:', error);
+    console.log('API Error Response:', response);
 
     // Clear previous errors
     clearAllErrors();
 
     // Handle network errors (no response)
     if (!response) {
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      if (error && error.name === 'TypeError' && error.message.includes('fetch')) {
         setApiError(ERROR_MESSAGES[ERROR_CODES.SERVER_NETWORK_ERROR]);
         return { 
           type: 'network', 
@@ -192,12 +225,22 @@ export function useErrorHandler() {
         };
       }
       
-      if (error.name === 'AbortError') {
+      if (error && error.name === 'AbortError') {
         setApiError(ERROR_MESSAGES[ERROR_CODES.SERVER_TIMEOUT]);
         return { 
           type: 'timeout', 
           code: ERROR_CODES.SERVER_TIMEOUT,
           message: ERROR_MESSAGES[ERROR_CODES.SERVER_TIMEOUT]
+        };
+      }
+      
+      // Handle error with message but no response
+      if (error && error.message) {
+        setApiError(error.message);
+        return {
+          type: 'error',
+          code: ERROR_CODES.UNKNOWN_ERROR,
+          message: error.message
         };
       }
       
@@ -214,6 +257,7 @@ export function useErrorHandler() {
     try {
       errorData = typeof response === 'string' ? JSON.parse(response) : response;
     } catch (e) {
+      console.error('Failed to parse error response:', e);
       setApiError(ERROR_MESSAGES[ERROR_CODES.INVALID_JSON]);
       return { 
         type: 'parse', 
@@ -224,6 +268,8 @@ export function useErrorHandler() {
 
     const parsedError = parseApiErrorResponse(errorData);
     const { code, message, details } = parsedError;
+    
+    console.log('Parsed error:', { code, message, details });
 
     // Handle specific error types
     switch (code) {
@@ -349,7 +395,81 @@ export function useErrorHandler() {
 
   // Enhanced error handler specifically for API responses
   const handleApiResponseError = (errorResponse) => {
+    console.log('Handling API response error:', errorResponse);
     return handleApiError(null, errorResponse);
+  };
+
+  /**
+   * Standardized error handler for fetch responses
+   * Use this in all API calls to ensure consistent error handling
+   * @param {Response} response - The fetch response object
+   * @returns {Promise<Object>} The parsed response data
+   * @throws {Error} Enhanced error with errorInfo property
+   */
+  const handleStandardizedApiResponse = async (response) => {
+    let responseData;
+    
+    try {
+      responseData = await response.json();
+    } catch (parseError) {
+      console.error('Failed to parse response JSON:', parseError);
+      const errorInfo = {
+        type: 'parse',
+        code: ERROR_CODES.INVALID_JSON,
+        message: ERROR_MESSAGES[ERROR_CODES.INVALID_JSON]
+      };
+      setApiError(errorInfo.message);
+      throw { response: null, errorInfo, originalError: parseError };
+    }
+    
+    // Check if response indicates success
+    if (response.ok && (responseData.success === true || responseData.success === undefined)) {
+      return responseData;
+    }
+    
+    // Handle error response
+    const errorInfo = handleApiResponseError(responseData);
+    throw { 
+      response: responseData, 
+      errorInfo, 
+      status: response.status,
+      statusText: response.statusText 
+    };
+  };
+
+  /**
+   * Enhanced makeApiRequest with better error handling for new backend format
+   * @param {string} url - The API endpoint URL
+   * @param {Object} options - Fetch options
+   * @returns {Promise<Object>} The API response data
+   * @throws {Error} Enhanced error with errorInfo property
+   */
+  const makeStandardizedApiRequest = async (url, options = {}) => {
+    try {
+      const headers = { ...options.headers };
+      
+      // Don't set Content-Type for FormData, let browser set it automatically
+      if (!(options.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+      }
+      
+      const response = await fetch(url, {
+        credentials: 'include',
+        headers,
+        ...options
+      });
+
+      return await handleStandardizedApiResponse(response);
+    } catch (error) {
+      // If error already has errorInfo (from handleStandardizedApiResponse), re-throw it
+      if (error.errorInfo) {
+        throw error;
+      }
+      
+      // Handle network/other errors
+      const errorInfo = handleApiError(error);
+      throw { ...error, errorInfo };
+    }
   };
 
   // Validation helpers (client-side validation that matches backend)
@@ -717,6 +837,10 @@ export function useErrorHandler() {
     handleApiError,
     handleApiResponseError,
     makeApiRequest,
+    // New standardized methods
+    handleStandardizedApiResponse,
+    makeStandardizedApiRequest,
+    parseApiErrorResponse,
     validateField,
     validateForm,
     // Individual validators

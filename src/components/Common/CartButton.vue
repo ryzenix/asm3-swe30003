@@ -85,7 +85,7 @@ const {
   decreaseQuantity, 
   getItemQuantity, 
   isInCart,
-  animationTriggers 
+  animationTriggers
 } = useCart()
 
 // Local state
@@ -157,5 +157,21 @@ const handleDecrease = () => {
 
 .quantity-btn:hover:not(:disabled) {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Toast animation */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
 }
 </style>

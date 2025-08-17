@@ -594,22 +594,22 @@
                 :disabled="cartItems.length === 0 || isProcessing"
                 :class="[
                   'w-full py-4 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-3 shadow-lg hover:shadow-xl transition-all',
-                  isCustomerFormValid 
-                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white' 
-                    : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white'
+                  !isLoggedIn
+                    ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
+                    : isSuperuser
+                      ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
+                      : isCustomerFormValid 
+                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white' 
+                        : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white'
                 ]"
               >
                 <i v-if="isProcessing" class="fas fa-spinner fa-spin"></i>
+                <i v-else-if="!isLoggedIn" class="fas fa-sign-in-alt"></i>
+                <i v-else-if="isSuperuser" class="fas fa-user-shield"></i>
                 <i v-else-if="isCustomerFormValid" class="fas fa-credit-card"></i>
                 <i v-else class="fas fa-edit"></i>
                 <span>
-                  {{ 
-                    isProcessing 
-                      ? 'Đang xử lý...' 
-                      : isCustomerFormValid 
-                        ? 'Tiến hành thanh toán' 
-                        : 'Điền thông tin giao hàng'
-                  }}
+                  {{ checkoutButtonText }}
                 </span>
               </button>
               
@@ -683,19 +683,7 @@
       </div>
     </div>
 
-    <!-- Success Messages -->
-    <div 
-      v-for="message in feedbackMessages" 
-      :key="message.id"
-      class="fixed top-4 right-4 bg-green-500 text-white px-6 py-4 rounded-xl shadow-lg z-50 animate-slide-in border border-green-400"
-    >
-      <div class="flex items-center space-x-3">
-        <div class="w-6 h-6 bg-green-400 rounded-full flex items-center justify-center">
-          <i class="fas fa-check text-green-800 text-sm"></i>
-        </div>
-        <span class="font-medium">{{ message.text }}</span>
-      </div>
-    </div>
+
 
     <!-- Prescription Upload Modal -->
     <PrescriptionUploadModal
@@ -709,35 +697,97 @@
     <CartIssuesModal
       :show="showCartIssuesModal"
       :cart-issues="cartIssues"
+      :refreshing="isRefreshingCartIssues"
       @close="closeCartIssuesModal"
       @proceed="onCartIssuesResolution"
       @remove-item="onRemoveCartItem"
       @add-alternative="onAddAlternative"
     />
+
+    <!-- Authentication Modal -->
+    <AuthOverlay
+      :visible="showAuthModal"
+      :isLoggedIn="isLoggedIn"
+      :user="user"
+      :autoClose="false"
+      @close="closeAuthModal"
+      @auth-success="handleAuthSuccess"
+    />
+
+    <!-- Superuser Checkout Modal -->
+    <SuperuserCheckoutModal
+      :show="showSuperuserModal"
+      :user="user"
+      @close="closeSuperuserModal"
+      @logout-and-login="handleSuperuserLogoutAndLogin"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCart } from '../composables/useCart'
 import { useCheckout } from '../composables/useCheckout'
+import { useAuth } from '../composables/useAuth'
+import { useToast } from '../composables/useToast'
+import { useErrorHandler } from '../composables/useErrorHandler'
+import { useErrorDisplay } from '../composables/useErrorDisplay'
 import PrescriptionUploadModal from '../components/Checkout/PrescriptionUploadModal.vue'
 import CartIssuesModal from '../components/Checkout/CartIssuesModal.vue'
+import AuthOverlay from '../components/AuthOverlay/AuthOverlay.vue'
+import SuperuserCheckoutModal from '../components/Checkout/SuperuserCheckoutModal.vue'
 
 const router = useRouter()
+const { showSuccess, showError, showInfo } = useToast()
+const { handleApiError, handleApiResponseError } = useErrorHandler()
+const { showErrorToast, handleApiErrorWithToast } = useErrorDisplay()
+
+// Centralized error handling helper
+const handleCheckoutError = (error, defaultMessage = 'Có lỗi xảy ra. Vui lòng thử lại.') => {
+  console.error('Checkout error:', error)
+  
+  // Use new standardized error display
+  const errorInfo = showErrorToast(error, defaultMessage)
+  
+  // Handle specific error types with appropriate UI actions
+  const errorMessage = error.message || ''
+  if (errorInfo.code === 'AUTHENTICATION_FAILED' || errorMessage.includes('đăng nhập')) {
+    showAuthModal.value = true
+  } else if (errorMessage.includes('quản trị viên') || errorMessage.includes('superuser')) {
+    showSuperuserModal.value = true
+  }
+  
+  return errorInfo
+}
 
 const {
   cartItems,
   totalItems,
   totalPrice,
   formattedTotalPrice,
-  feedbackMessages,
   increaseQuantity,
   decreaseQuantity,
   removeFromCart,
   clearCart
 } = useCart()
+
+const {
+  isLoggedIn,
+  user,
+  forceLoginStateUpdate
+} = useAuth()
+
+// Manual reactive trigger for login state
+const manualLoginState = ref(false)
+const manualUser = ref(null)
+
+// Update manual state when auth state changes
+watch([isLoggedIn, user], ([newIsLoggedIn, newUser]) => {
+  console.log('Auth state changed, updating manual state:', { newIsLoggedIn, newUser })
+  manualLoginState.value = newIsLoggedIn
+  manualUser.value = newUser
+}, { immediate: true, deep: true })
 
 const {
   isProcessing: checkoutProcessing,
@@ -750,12 +800,14 @@ const {
   navigateToOrder,
   closePrescriptionModal,
   closeCartIssuesModal,
-  checkPrescriptionRequirements
+  checkPrescriptionRequirements,
+  refreshCartIssues
 } = useCheckout()
 
 // Local state
 const selectedItems = ref([])
 const isUpdating = ref(false)
+const isRefreshingCartIssues = ref(false)
 
 // Customer information form
 const customerForm = ref({
@@ -774,9 +826,14 @@ const formValidation = ref({
 })
 
 const showCustomerForm = ref(false)
+const showAuthModal = ref(false)
+const showSuperuserModal = ref(false)
 
 // Use checkout processing state instead of local isProcessing
 const isProcessing = computed(() => checkoutProcessing.value)
+
+// Check if user is superuser
+const isSuperuser = computed(() => user.value?.role === 'superuser')
 
 // Computed
 const allSelected = computed(() => {
@@ -804,6 +861,36 @@ const isCustomerFormValid = computed(() => {
          customerForm.value.address.trim() !== ''
 })
 
+// Debug computed for checkout button text
+const checkoutButtonText = computed(() => {
+  // Use both original and manual state for comparison
+  const originalLoggedIn = isLoggedIn.value
+  const manualLoggedIn = manualLoginState.value
+  const currentUser = user.value || manualUser.value
+  
+  const text = isProcessing.value 
+    ? 'Đang xử lý...' 
+    : !manualLoggedIn
+      ? 'Đăng nhập để thanh toán'
+      : isSuperuser.value
+        ? 'Đăng xuất tài khoản quản trị'
+        : isCustomerFormValid.value 
+          ? 'Tiến hành thanh toán' 
+          : 'Điền thông tin giao hàng'
+  
+  console.log('Checkout button text computed:', {
+    text,
+    isProcessing: isProcessing.value,
+    originalLoggedIn,
+    manualLoggedIn,
+    isSuperuser: isSuperuser.value,
+    isCustomerFormValid: isCustomerFormValid.value,
+    currentUser
+  })
+  
+  return text
+})
+
 // Methods
 const toggleSelectAll = () => {
   if (allSelected.value) {
@@ -829,10 +916,25 @@ const removeSelectedItems = () => {
 const proceedToCheckout = async () => {
   if (cartItems.value.length === 0) return
   
+  // Check if user is logged in first (use both original and manual state)
+  const currentlyLoggedIn = isLoggedIn.value || manualLoginState.value
+  if (!currentlyLoggedIn) {
+    showAuthModal.value = true
+    showError('Vui lòng đăng nhập để tiếp tục thanh toán')
+    return
+  }
+  
+  // Check if user is superuser - they cannot make purchases
+  if (isSuperuser.value) {
+    showSuperuserModal.value = true
+    showError('Tài khoản quản trị viên không thể thực hiện mua hàng')
+    return
+  }
+  
   // Check if customer info is required and valid
   if (!isCustomerFormValid.value) {
     showCustomerForm.value = true
-    showToast('Vui lòng điền đầy đủ thông tin giao hàng', 'error')
+    showError('Vui lòng điền đầy đủ thông tin giao hàng')
     return
   }
   
@@ -849,12 +951,20 @@ const proceedToCheckout = async () => {
         method: customerForm.value.deliveryMethod === 'grab' ? 'Giao hàng nhanh (Grab)' : 'Giao hàng tiêu chuẩn',
         carrier: customerForm.value.deliveryMethod === 'grab' ? 'GRAB' : 'STANDARD',
         estimatedTime: customerForm.value.deliveryMethod === 'grab' ? '30-45 phút' : '1-2 ngày',
-        timeSlot: getDeliveryTimeSlot(customerForm.value.deliveryTime)
+        timeSlot: getDeliveryTimeSlot(customerForm.value.deliveryTime),
+        // Map to database schema
+        deliveryMethod: mapDeliveryMethod(customerForm.value.deliveryMethod)
       },
       notes: customerForm.value.notes.trim()
     }
     
+    // NEW FLOW: initiateCheckout now always checks availability FIRST, then prescription requirements
+    // This ensures that even prescription-required products are checked for stock/discontinued status
     const result = await initiateCheckout(orderData)
+    
+    console.log('initiateCheckout result:', result)
+    console.log('Result step:', result.step)
+    console.log('Result data:', result.data)
     
     if (result.step === 'success') {
       // Clear cart and form after successful order
@@ -863,16 +973,21 @@ const proceedToCheckout = async () => {
       clearCustomerForm()
       
       // Show success message
-      showToast('Đặt hàng thành công!', 'success')
+      showSuccess('Đặt hàng thành công!')
       
       // Navigate to order details
       navigateToOrder(result.data.orderId)
+    } else if (result.step === 'issues') {
+      console.log('Cart issues modal should be shown with data:', result.data)
+      // The modal should be shown automatically by useCheckout
+    } else if (result.step === 'prescription') {
+      console.log('Prescription modal should be shown with data:', result.data)
+      // The modal should be shown automatically by useCheckout
     }
     // Other steps (prescription, issues) are handled by modals
     
   } catch (error) {
-    console.error('Checkout error:', error)
-    showToast(error.message || 'Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.', 'error')
+    handleCheckoutError(error, 'Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.')
   }
 }
 
@@ -891,7 +1006,9 @@ const onPrescriptionSubmit = async (prescriptionData) => {
         method: customerForm.value.deliveryMethod === 'grab' ? 'Giao hàng nhanh (Grab)' : 'Giao hàng tiêu chuẩn',
         carrier: customerForm.value.deliveryMethod === 'grab' ? 'GRAB' : 'STANDARD',
         estimatedTime: customerForm.value.deliveryMethod === 'grab' ? '30-45 phút' : '1-2 ngày',
-        timeSlot: getDeliveryTimeSlot(customerForm.value.deliveryTime)
+        timeSlot: getDeliveryTimeSlot(customerForm.value.deliveryTime),
+        // Map to database schema
+        deliveryMethod: mapDeliveryMethod(customerForm.value.deliveryMethod)
       },
       notes: customerForm.value.notes.trim(),
       prescriptionData
@@ -906,14 +1023,13 @@ const onPrescriptionSubmit = async (prescriptionData) => {
       clearCustomerForm()
       
       // Show success message
-      showToast('Đặt hàng thành công!', 'success')
+      showSuccess('Đặt hàng thành công!')
       
       // Navigate to order details
       navigateToOrder(result.data.orderId)
     }
   } catch (error) {
-    console.error('Prescription submission error:', error)
-    showToast(error.message || 'Có lỗi xảy ra khi xử lý đơn thuốc.', 'error')
+    handleCheckoutError(error, 'Có lỗi xảy ra khi xử lý đơn thuốc.')
   }
 }
 
@@ -932,10 +1048,16 @@ const onCartIssuesResolution = async (resolution) => {
         method: customerForm.value.deliveryMethod === 'grab' ? 'Giao hàng nhanh (Grab)' : 'Giao hàng tiêu chuẩn',
         carrier: customerForm.value.deliveryMethod === 'grab' ? 'GRAB' : 'STANDARD',
         estimatedTime: customerForm.value.deliveryMethod === 'grab' ? '30-45 phút' : '1-2 ngày',
-        timeSlot: getDeliveryTimeSlot(customerForm.value.deliveryTime)
+        timeSlot: getDeliveryTimeSlot(customerForm.value.deliveryTime),
+        // Map to database schema
+        deliveryMethod: mapDeliveryMethod(customerForm.value.deliveryMethod)
       },
       notes: customerForm.value.notes.trim(),
-      resolution
+      resolution: {
+        action: 'proceed',
+        availableItems: resolution.availableItems || [],
+        total: resolution.total || 0
+      }
     }
     
     const result = await handleCartIssuesResolution(orderData)
@@ -947,59 +1069,37 @@ const onCartIssuesResolution = async (resolution) => {
       clearCustomerForm()
       
       // Show success message
-      showToast('Đặt hàng thành công!', 'success')
+      showSuccess('Đặt hàng thành công!')
       
       // Navigate to order details
       navigateToOrder(result.data.orderId)
     }
   } catch (error) {
-    console.error('Cart issues resolution error:', error)
-    showToast(error.message || 'Có lỗi xảy ra khi xử lý giỏ hàng.', 'error')
+    handleCheckoutError(error, 'Có lỗi xảy ra khi xử lý giỏ hàng.')
   }
 }
 
-const onRemoveCartItem = (itemId) => {
+const onRemoveCartItem = async (itemId) => {
   removeFromCart(itemId)
+  // Manually refresh cart issues to ensure modal updates immediately
+  try {
+    isRefreshingCartIssues.value = true
+    await refreshCartIssues()
+  } catch (error) {
+    console.error('Error refreshing cart issues:', error)
+  } finally {
+    isRefreshingCartIssues.value = false
+  }
 }
 
 const onAddAlternative = (alternative) => {
   // Add alternative product to cart
   // This would typically use the addToCart function from useCart
   console.log('Adding alternative product:', alternative)
-  showToast(`Đã thêm sản phẩm thay thế: ${alternative.title}`, 'success')
+  showSuccess(`Đã thêm sản phẩm thay thế: ${alternative.title}`)
 }
 
-// Toast notification function
-const showToast = (message, type = 'success') => {
-  const toast = document.createElement('div')
-  const bgColor = type === 'success' ? 'bg-green-600' : 'bg-red-600'
-  const icon = type === 'success' ? 'fas fa-check' : 'fas fa-exclamation-triangle'
-  
-  toast.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-xl shadow-lg z-50 transform transition-all duration-300 flex items-center space-x-3`
-  toast.innerHTML = `
-    <i class="${icon}"></i>
-    <span>${message}</span>
-  `
-  
-  document.body.appendChild(toast)
-  
-  // Animate in
-  setTimeout(() => {
-    toast.style.transform = 'translateX(0)'
-    toast.style.opacity = '1'
-  }, 100)
-  
-  // Remove toast after 3 seconds
-  setTimeout(() => {
-    toast.style.transform = 'translateX(100%)'
-    toast.style.opacity = '0'
-    setTimeout(() => {
-      if (document.body.contains(toast)) {
-        document.body.removeChild(toast)
-      }
-    }, 300)
-  }, 3000)
-}
+
 
 const calculateOriginalPrice = (item) => {
   if (item.discount) {
@@ -1087,7 +1187,7 @@ const clearCustomerForm = () => {
     address: { isValid: true, error: '' }
   }
   
-  showToast('Đã xóa thông tin form', 'success')
+  showSuccess('Đã xóa thông tin form')
 }
 
 const saveCustomerInfo = () => {
@@ -1097,11 +1197,21 @@ const saveCustomerInfo = () => {
   validateField('address')
   
   if (isCustomerFormValid.value) {
-    showToast('Đã lưu thông tin giao hàng', 'success')
+    showSuccess('Đã lưu thông tin giao hàng')
     showCustomerForm.value = false
   } else {
-    showToast('Vui lòng kiểm tra lại thông tin đã nhập', 'error')
+    showError('Vui lòng kiểm tra lại thông tin đã nhập')
   }
+}
+
+// Map frontend delivery method to database schema
+const mapDeliveryMethod = (frontendMethod) => {
+  const mapping = {
+    'grab': 'express',      // Grab (30-45 phút) -> Express delivery
+    'standard': 'standard', // Standard (1-2 ngày) -> Standard delivery
+    'same_day': 'same_day'  // Same day delivery (if added later)
+  }
+  return mapping[frontendMethod] || 'standard'
 }
 
 const getDeliveryTimeSlot = (timeSlot) => {
@@ -1117,6 +1227,126 @@ const getDeliveryTimeSlot = (timeSlot) => {
 const handleImageError = (event) => {
   event.target.src = '/img/products/placeholder-product.jpg'
 }
+
+// Auth modal handlers
+const handleAuthSuccess = async () => {
+  try {
+    console.log('Auth success triggered, updating login state...')
+    
+    // Force update login state multiple times to ensure it sticks
+    await forceLoginStateUpdate()
+    await nextTick()
+    
+    // Manually update our local state as backup
+    manualLoginState.value = true
+    manualUser.value = user.value
+    
+    // Wait a bit and check again
+    await new Promise(resolve => setTimeout(resolve, 100))
+    await forceLoginStateUpdate()
+    await nextTick()
+    
+    // Update manual state again
+    manualLoginState.value = isLoggedIn.value || true
+    manualUser.value = user.value
+    
+    // Emit global event to notify App.vue
+    window.dispatchEvent(new CustomEvent('auth-state-changed', {
+      detail: {
+        isLoggedIn: isLoggedIn.value || true,
+        user: user.value
+      }
+    }))
+    
+    // Close modal after state is updated
+    showAuthModal.value = false
+    
+    // Show success message
+    showSuccess('Đăng nhập thành công!')
+    
+    // Final check after a longer delay to ensure state is stable
+    setTimeout(async () => {
+      console.log('Final login state check...')
+      await forceLoginStateUpdate()
+      
+      // Ensure manual state is correct
+      manualLoginState.value = isLoggedIn.value || true
+      manualUser.value = user.value
+      
+      // Emit another event after final check
+      window.dispatchEvent(new CustomEvent('auth-state-changed', {
+        detail: {
+          isLoggedIn: isLoggedIn.value || true,
+          user: user.value
+        }
+      }))
+      
+      console.log('Login state after final check:', {
+        original: isLoggedIn.value,
+        manual: manualLoginState.value,
+        user: user.value
+      })
+    }, 300)
+    
+  } catch (error) {
+    console.error('Error updating login state:', error)
+    showError('Có lỗi xảy ra khi cập nhật trạng thái đăng nhập')
+  }
+}
+
+const closeAuthModal = () => {
+  showAuthModal.value = false
+}
+
+// Superuser modal handlers
+const closeSuperuserModal = () => {
+  showSuperuserModal.value = false
+}
+
+const handleSuperuserLogoutAndLogin = () => {
+  // After logout, show the auth modal for login
+  showAuthModal.value = true
+  showInfo('Vui lòng đăng nhập bằng tài khoản khách hàng')
+}
+
+// Watch for login state changes to ensure UI reactivity
+watch(isLoggedIn, (newValue, oldValue) => {
+  console.log('Login state watcher triggered:', { from: oldValue, to: newValue, user: user.value })
+  
+  if (newValue !== oldValue) {
+    console.log('Login state actually changed:', { from: oldValue, to: newValue })
+    
+    // Force UI update when login state changes
+    nextTick(() => {
+      console.log('UI updated after login state change, current state:', {
+        isLoggedIn: isLoggedIn.value,
+        user: user.value,
+        buttonText: !isLoggedIn.value ? 'Đăng nhập để thanh toán' : 'Tiến hành thanh toán'
+      })
+    })
+  }
+}, { immediate: true, flush: 'sync' })
+
+// Also watch user object changes
+watch(user, (newUser, oldUser) => {
+  console.log('User object changed:', { from: oldUser, to: newUser })
+}, { deep: true, immediate: true })
+
+// Watch for cart issues modal opening to refresh data
+watch(showCartIssuesModal, async (isOpen) => {
+  if (isOpen && cartItems.value.length > 0) {
+    try {
+      isRefreshingCartIssues.value = true
+      await refreshCartIssues()
+    } catch (error) {
+      console.error('Error refreshing cart issues on modal open:', error)
+    } finally {
+      isRefreshingCartIssues.value = false
+    }
+  }
+})
+
+// Cart actions are handled by useCart composable with global toast notifications
 </script>
 
 <style scoped>

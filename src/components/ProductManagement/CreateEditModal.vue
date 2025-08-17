@@ -894,7 +894,10 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
+import { useToast } from '../../composables/useToast'
 import { useCategories, useLegacyCategories } from '../../composables/useCategories.js'
+
+const { showSuccess, showError } = useToast()
 import { useErrorHandler } from '../../composables/useErrorHandler.js'
 import { useProductApi } from '../../services/productApi.js'
 
@@ -1443,7 +1446,7 @@ const processFiles = async (files) => {
   for (const file of files) {
     if (file.type.startsWith('image/')) {
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        alert(`File ${file.name} quá lớn. Kích thước tối đa là 5MB.`)
+        showError(`File ${file.name} quá lớn. Kích thước tối đa là 5MB.`)
         continue
       }
       
@@ -1535,7 +1538,7 @@ const processFiles = async (files) => {
       }
       reader.readAsDataURL(file)
     } else {
-      alert(`File ${file.name} không phải là hình ảnh.`)
+      showError(`File ${file.name} không phải là hình ảnh.`)
     }
   }
 }

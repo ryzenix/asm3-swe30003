@@ -81,82 +81,44 @@ export function useProductApi() {
 
   // Delete product
   const deleteProduct = async (id) => {
-    try {
-      const url = `${API_BASE_URL}/products/management/delete/${id}`
-      const response = await makeApiRequest(url, {
-        method: 'DELETE'
-      })
-      
-      return response
-    } catch (error) {
-      console.error('Delete product error:', error)
-      throw error
-    }
+    const url = `${API_BASE_URL}/products/management/delete/${id}`
+    return await makeApiRequest(url, {
+      method: 'DELETE'
+    })
   }
 
   // Upload product image
   const uploadImage = async (productId, file) => {
-    try {
-      const formData = new FormData()
-      formData.append('image', file)
-      
-      const url = `${API_BASE_URL}/products/management/${productId}/images/upload`
-      const response = await makeApiRequest(url, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          // Don't set Content-Type for FormData, let browser set it
-        }
-      })
-      
-      return response
-    } catch (error) {
-      console.error('Upload image error:', error)
-      throw error
-    }
+    const formData = new FormData()
+    formData.append('image', file)
+    
+    const url = `${API_BASE_URL}/products/management/${productId}/images/upload`
+    return await makeApiRequest(url, {
+      method: 'POST',
+      body: formData
+    })
   }
 
   // Delete product image
   const deleteImage = async (productId, imageIndex) => {
-    try {
-      const url = `${API_BASE_URL}/products/management/${productId}/images/${imageIndex}`
-      const response = await makeApiRequest(url, {
-        method: 'DELETE'
-      })
-      
-      return response
-    } catch (error) {
-      console.error('Delete image error:', error)
-      throw error
-    }
+    const url = `${API_BASE_URL}/products/management/${productId}/images/${imageIndex}`
+    return await makeApiRequest(url, {
+      method: 'DELETE'
+    })
   }
 
   // Set main image
   const setMainImage = async (productId, imageIndex) => {
-    try {
-      const url = `${API_BASE_URL}/products/management/${productId}/images/${imageIndex}/main`
-      const response = await makeApiRequest(url, {
-        method: 'PUT'
-      })
-      
-      return response
-    } catch (error) {
-      console.error('Set main image error:', error)
-      throw error
-    }
+    const url = `${API_BASE_URL}/products/management/${productId}/images/${imageIndex}/main`
+    return await makeApiRequest(url, {
+      method: 'PUT'
+    })
   }
 
   // Get filter options for products
   const getFilterOptions = async () => {
-    try {
-      const url = `${API_BASE_URL}/products/filter-options`
-      const response = await makeApiRequest(url)
-      
-      return response
-    } catch (error) {
-      console.error('Get filter options error:', error)
-      throw error
-    }
+    const url = `${API_BASE_URL}/products/filter-options`
+    return await makeApiRequest(url)
   }
 
   return {

@@ -14,8 +14,8 @@
         <!-- Product Image -->
         <div class="relative flex-shrink-0">
           <img 
-            :src="item.image" 
-            :alt="item.name" 
+            :src="getMainImage(item)" 
+            :alt="item.productTitle" 
             class="w-16 h-16 object-cover rounded-lg shadow-sm"
           >
           <!-- Quantity Badge -->
@@ -26,17 +26,18 @@
 
         <!-- Product Info -->
         <div class="flex-1 min-w-0">
-          <h4 class="font-medium text-gray-800 truncate">{{ item.name }}</h4>
+          <h4 class="font-medium text-gray-800 truncate">{{ item.productTitle }}</h4>
           <div class="flex items-center space-x-4 mt-1">
-            <span class="text-sm text-gray-600">{{ item.category }}</span>
-            <span class="text-sm text-blue-600 font-medium">{{ formatPrice(item.price) }}đ</span>
+            <span v-if="item.productSku" class="text-sm text-gray-600">SKU: {{ item.productSku }}</span>
+            <span v-if="item.requiresPrescription" class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">Cần đơn thuốc</span>
+            <span class="text-sm text-blue-600 font-medium">{{ formatPrice(item.unitPrice) }}đ</span>
           </div>
         </div>
 
         <!-- Total Price -->
         <div class="text-right flex-shrink-0">
-          <div class="font-semibold text-gray-800">{{ formatPrice(item.price * item.quantity) }}đ</div>
-          <div class="text-sm text-gray-600">{{ item.quantity }} × {{ formatPrice(item.price) }}đ</div>
+          <div class="font-semibold text-gray-800">{{ formatPrice(item.totalPrice) }}đ</div>
+          <div class="text-sm text-gray-600">{{ item.quantity }} × {{ formatPrice(item.unitPrice) }}đ</div>
         </div>
 
         <!-- Actions -->
@@ -73,6 +74,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useToast } from '../../composables/useToast'
 
 const props = defineProps({
   items: {
@@ -81,14 +83,27 @@ const props = defineProps({
   }
 })
 
+console.log(props.items)
+
+// Toast functionality
+const { showSuccess } = useToast()
+
 // Computed properties
 const totalAmount = computed(() => {
-  return props.items.reduce((total, item) => total + (item.price * item.quantity), 0)
+  return props.items.reduce((total, item) => total + parseFloat(item.totalPrice), 0)
 })
 
 // Methods
 function formatPrice(price) {
-  return new Intl.NumberFormat('vi-VN').format(price)
+  return new Intl.NumberFormat('vi-VN').format(parseFloat(price))
+}
+
+function getMainImage(item) {
+  if (item.productImages && item.productImages.length > 0) {
+    const mainIndex = item.mainImageIndex || 0
+    return item.productImages[mainIndex] || item.productImages[0]
+  }
+  return '/placeholder-image.jpg' // fallback image
 }
 
 function viewProduct(item) {
@@ -100,37 +115,10 @@ function viewProduct(item) {
 function addToCart(item) {
   // Add single item to cart
   console.log('Adding to cart:', item)
-  showToast(`Đã thêm ${item.name} vào giỏ hàng!`, 'success')
+  showSuccess(`Đã thêm ${item.productTitle} vào giỏ hàng!`)
 }
 
 
 
-function showToast(message, type = 'success') {
-  const toast = document.createElement('div')
-  const bgColor = type === 'success' ? 'bg-green-600' : 'bg-red-600'
-  const icon = type === 'success' ? 'fas fa-check' : 'fas fa-exclamation-triangle'
-  
-  toast.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-xl shadow-lg z-50 transform transition-all duration-300 flex items-center space-x-3`
-  toast.innerHTML = `
-    <i class="${icon}"></i>
-    <span>${message}</span>
-  `
-  
-  document.body.appendChild(toast)
-  
-  setTimeout(() => {
-    toast.style.transform = 'translateX(0)'
-    toast.style.opacity = '1'
-  }, 100)
-  
-  setTimeout(() => {
-    toast.style.transform = 'translateX(100%)'
-    toast.style.opacity = '0'
-    setTimeout(() => {
-      if (document.body.contains(toast)) {
-        document.body.removeChild(toast)
-      }
-    }, 300)
-  }, 3000)
-}
+
 </script>

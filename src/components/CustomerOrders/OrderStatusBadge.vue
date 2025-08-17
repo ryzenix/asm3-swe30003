@@ -19,7 +19,7 @@ const props = defineProps({
     type: String,
     required: true,
     validator: (value) => {
-      return ['pending', 'confirmed', 'processing', 'shipping', 'delivered', 'cancelled'].includes(value)
+      return ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'].includes(value)
     }
   }
 })
@@ -42,8 +42,9 @@ const statusConfig = computed(() => {
       icon: 'fas fa-cog fa-spin',
       classes: 'bg-purple-100 text-purple-800 border border-purple-200'
     },
-    shipping: {
-      label: 'Đang giao hàng',
+
+    shipped: {
+      label: 'Đã gửi hàng',
       icon: 'fas fa-truck',
       classes: 'bg-indigo-100 text-indigo-800 border border-indigo-200'
     },
@@ -107,7 +108,7 @@ span:hover {
   box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.2);
 }
 
-/* Subtle shadow for shipping status */
+/* Subtle shadow for shipped status */
 .bg-indigo-100 {
   box-shadow: 0 2px 4px rgba(99, 102, 241, 0.1);
 }

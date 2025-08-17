@@ -368,6 +368,13 @@
 import { ref, computed, watch } from 'vue'
 import { useErrorHandler } from '../../composables/useErrorHandler'
 
+const props = defineProps({
+  autoClose: {
+    type: Boolean,
+    default: true
+  }
+})
+
 const emit = defineEmits(['back', 'close', 'auth-success'])
 
 // Use centralized error handler
@@ -603,6 +610,11 @@ const handleSubmit = async () => {
     // Auto-close after 3 seconds and emit auth success
     setTimeout(() => {
       emit('auth-success')
+      
+      // Auto-close if enabled (default behavior)
+      if (props.autoClose) {
+        emit('close')
+      }
     }, 3000)
 
   } catch (error) {
@@ -616,7 +628,11 @@ const handleSubmit = async () => {
 // Close modal and emit auth success
 const closeModal = () => {
   emit('auth-success')
-  emit('close')
+  
+  // Auto-close if enabled (default behavior)
+  if (props.autoClose) {
+    emit('close')
+  }
 }
 
 // Reset form

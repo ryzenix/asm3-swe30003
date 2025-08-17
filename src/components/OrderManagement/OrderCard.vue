@@ -21,24 +21,20 @@
     </div>
 
     <!-- Prescription Status -->
-    <div class="col-span-1 flex items-center">
-      <div v-if="order.prescriptionData" class="flex flex-col items-center">
-        <div v-if="order.prescriptionData.validationStatus === 'pending'" class="flex items-center space-x-1">
-          <div class="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-          <span class="text-xs text-yellow-700 font-medium">Chờ</span>
+    <div class="col-span-1 flex items-center justify-center">
+      <div v-if="order.prescriptionId" class="flex flex-col items-center space-y-1">
+        <!-- Has Prescription -->
+        <div class="flex items-center space-x-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium">
+          <i class="fas fa-prescription-bottle-alt text-blue-600"></i>
+          <span>Có đơn thuốc</span>
         </div>
-        <div v-else-if="order.prescriptionData.validationStatus === 'approved'" class="flex items-center space-x-1">
-          <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-          <span class="text-xs text-green-700 font-medium">Duyệt</span>
-        </div>
-        <div v-else-if="order.prescriptionData.validationStatus === 'rejected'" class="flex items-center space-x-1">
-          <div class="w-2 h-2 bg-red-500 rounded-full"></div>
-          <span class="text-xs text-red-700 font-medium">Từ chối</span>
-        </div>
-        <i class="fas fa-prescription-bottle-alt text-red-500 text-xs mt-1"></i>
+        <div class="text-xs text-gray-500 mt-1">ID: {{ order.prescriptionId }}</div>
       </div>
-      <div v-else class="text-center">
-        <span class="text-xs text-gray-400">-</span>
+      <div v-else class="text-center text-gray-400">
+        <div class="flex flex-col items-center space-y-1">
+          <i class="fas fa-minus text-xs"></i>
+          <span class="text-xs">Không có</span>
+        </div>
       </div>
     </div>
 
@@ -144,22 +140,14 @@
           <span class="text-sm text-gray-600">Số sản phẩm:</span>
           <span class="text-sm text-gray-700">{{ order.items.length }} sản phẩm</span>
         </div>
-        <div v-if="order.prescriptionData" class="flex justify-between items-center">
+        <div class="flex justify-between items-center">
           <span class="text-sm text-gray-600">Đơn thuốc:</span>
-          <div class="flex items-center space-x-2">
-            <div v-if="order.prescriptionData.validationStatus === 'pending'" class="flex items-center space-x-1">
-              <div class="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-              <span class="text-xs text-yellow-700 font-medium">Chờ xác thực</span>
-            </div>
-            <div v-else-if="order.prescriptionData.validationStatus === 'approved'" class="flex items-center space-x-1">
-              <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span class="text-xs text-green-700 font-medium">Đã phê duyệt</span>
-            </div>
-            <div v-else-if="order.prescriptionData.validationStatus === 'rejected'" class="flex items-center space-x-1">
-              <div class="w-2 h-2 bg-red-500 rounded-full"></div>
-              <span class="text-xs text-red-700 font-medium">Đã từ chối</span>
-            </div>
-            <i class="fas fa-prescription-bottle-alt text-red-500 text-xs"></i>
+          <div v-if="order.prescriptionId" class="flex items-center space-x-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium">
+            <i class="fas fa-prescription-bottle-alt text-blue-600"></i>
+            <span>Có đơn thuốc</span>
+          </div>
+          <div v-else class="text-gray-400 text-xs">
+            Không có
           </div>
         </div>
       </div>
@@ -227,7 +215,7 @@ defineEmits(['view-details', 'change-status', 'cancel-order', 'validate-prescrip
 
 // Computed properties
 const canChangeStatus = computed(() => {
-  return ['pending', 'confirmed', 'processing', 'shipping'].includes(props.order.status)
+      return ['pending', 'confirmed', 'processing', 'shipped'].includes(props.order.status)
 })
 
 const canCancel = computed(() => {
@@ -235,7 +223,7 @@ const canCancel = computed(() => {
 })
 
 const hasPrescription = computed(() => {
-  return props.order.prescriptionData !== null && props.order.prescriptionData !== undefined
+  return props.order.prescriptionId !== null && props.order.prescriptionId !== undefined
 })
 
 // Helper functions

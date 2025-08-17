@@ -8,14 +8,14 @@
             Đơn hàng {{ order.date }}
           </h1>
           <div class="flex items-center space-x-2">
-            <span class="text-gray-600">Giao hàng tận nơi</span>
             <span class="text-blue-600 font-semibold">#{{ order.orderNumber }}</span>
             <button 
               @click="copyOrderNumber"
-              class="text-blue-600 hover:text-blue-800 transition-colors duration-200"
+              class="text-blue-600 hover:text-blue-800 transition-colors duration-200 flex items-center justify-center"
               title="Sao chép mã đơn hàng"
+              style="padding: 4px; min-width: 28px; min-height: 28px;"
             >
-              <i class="fas fa-copy text-sm"></i>
+              <i class="fas fa-copy text-sm" style="display: block; line-height: 1;"></i>
             </button>
           </div>
         </div>
@@ -41,7 +41,8 @@
         
         <button 
           @click="shareOrder"
-          class="group bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-200 hover:border-gray-300 px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-sm hover:shadow-md flex items-center justify-center space-x-2"
+          class="group bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-200 hover:border-gray-300 px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-sm hover:shadow-md flex items-center justify-center space-x-2 whitespace-nowrap"
+          style="white-space: nowrap;"
         >
           <i class="fas fa-share-alt group-hover:rotate-12 transition-transform duration-300"></i>
           <span>Chia sẻ</span>
@@ -67,6 +68,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useToast } from '../../composables/useToast'
 
 const props = defineProps({
   order: {
@@ -74,6 +76,9 @@ const props = defineProps({
     required: true
   }
 })
+
+// Toast functionality
+const { showSuccess } = useToast()
 
 // No emits needed
 
@@ -95,8 +100,8 @@ const statusConfig = computed(() => {
       class: 'bg-orange-100 text-orange-800 border border-orange-200',
       dotClass: 'bg-orange-500'
     },
-    shipping: {
-      text: 'Đang giao hàng',
+    shipped: {
+      text: 'Đã gửi hàng',
       class: 'bg-purple-100 text-purple-800 border border-purple-200',
       dotClass: 'bg-purple-500'
     },
@@ -121,7 +126,7 @@ const statusConfig = computed(() => {
 function copyOrderNumber() {
   const orderText = `#${props.order.orderNumber}`
   navigator.clipboard.writeText(orderText).then(() => {
-    showToast('Đã sao chép mã đơn hàng!', 'success')
+    showSuccess('Đã sao chép mã đơn hàng!')
   }).catch(err => {
     console.error('Không thể sao chép:', err)
   })
@@ -137,37 +142,10 @@ function shareOrder() {
   } else {
     // Fallback: copy URL to clipboard
     navigator.clipboard.writeText(window.location.href).then(() => {
-      showToast('Đã sao chép link đơn hàng!', 'success')
+      showSuccess('Đã sao chép link đơn hàng!')
     })
   }
 }
 
-function showToast(message, type = 'success') {
-  const toast = document.createElement('div')
-  const bgColor = type === 'success' ? 'bg-green-600' : 'bg-red-600'
-  const icon = type === 'success' ? 'fas fa-check' : 'fas fa-exclamation-triangle'
-  
-  toast.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-xl shadow-lg z-50 transform transition-all duration-300 flex items-center space-x-3`
-  toast.innerHTML = `
-    <i class="${icon}"></i>
-    <span>${message}</span>
-  `
-  
-  document.body.appendChild(toast)
-  
-  setTimeout(() => {
-    toast.style.transform = 'translateX(0)'
-    toast.style.opacity = '1'
-  }, 100)
-  
-  setTimeout(() => {
-    toast.style.transform = 'translateX(100%)'
-    toast.style.opacity = '0'
-    setTimeout(() => {
-      if (document.body.contains(toast)) {
-        document.body.removeChild(toast)
-      }
-    }, 300)
-  }, 3000)
-}
+
 </script>

@@ -44,7 +44,7 @@
     </div>
 
     <!-- Delivery Tracking -->
-    <div v-if="order.status === 'shipping'" class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+            <div v-if="order.status === 'shipped'" class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
       <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
         <i class="fas fa-map-marker-alt text-green-600 mr-3"></i>
         Theo dõi giao hàng
@@ -75,19 +75,7 @@
       </div>
     </div>
 
-    <!-- Promotion Banner -->
-    <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-6 text-white">
-      <div class="text-center space-y-3">
-        <div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto">
-          <i class="fas fa-gift text-2xl"></i>
-        </div>
-        <h4 class="font-semibold">FREESHIP NHẬN THUỐC ĐÚNG TỎA</h4>
-        <p class="text-sm text-blue-100">GIAO HÀNG TẬN NHÀ TRONG GIỜ!</p>
-        <button class="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200">
-          Tìm hiểu thêm
-        </button>
-      </div>
-    </div>
+
   </div>
 </template>
 

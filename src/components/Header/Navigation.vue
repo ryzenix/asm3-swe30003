@@ -1,8 +1,8 @@
 <!-- Navigation Component -->
 <template>
-  <header class="bg-gradient-to-r from-green-700 to-green-600 text-white shadow-lg relative z-50">
+  <header class="bg-gradient-to-r from-green-700 via-green-600 to-green-700 text-white shadow-xl backdrop-blur-sm relative z-50">
     <!-- Top Info Bar -->
-    <div class="bg-green-800 text-xs py-1">
+    <div class="bg-green-800/90 backdrop-blur-sm text-xs py-2 border-b border-green-700/50">
       <div class="container mx-auto px-4 flex flex-wrap items-center justify-between">
         <div class="flex items-center gap-4">
           <span class="flex items-center gap-1">
@@ -28,7 +28,7 @@
       </div>
     </div>
 
-    <div class="container mx-auto px-4 py-3">
+    <div class="container mx-auto px-4 py-4">
       <!-- Top Row: Logo, Search, and Actions -->
       <div class="flex items-center justify-between gap-3">
         <!-- Logo and Slogan -->
@@ -40,14 +40,14 @@
 
         <!-- Search bar - Hidden on mobile, shown on tablet+ -->
         <div class="flex-1 mx-4 hidden md:block max-w-2xl">
-        <div class="relative">
+        <div class="flex group">
             <input
                 type="text"
                 placeholder="Tìm thuốc, bệnh lý, thực phẩm chức năng..."
-                class="w-full px-4 py-3 pr-12 rounded-lg text-black text-sm bg-white shadow-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-300 focus:border-transparent"
+                class="flex-grow px-5 py-3.5 rounded-l-xl text-gray-800 text-sm bg-white/95 backdrop-blur-sm shadow-lg border border-white/50 focus:outline-none focus:ring-3 focus:ring-green-300/50 focus:border-green-400 focus:shadow-xl transition-all duration-300 placeholder:text-gray-500"
             />
-            <button class="absolute right-1 md:top-1 md:bottom-1 mobile-search-button bg-green-500 px-4 py-2 md:py-0 rounded-md hover:bg-green-600 transition-colors flex items-center justify-center">
-                <i class="fas fa-search text-white"></i>
+            <button class="bg-gradient-to-r from-green-500 to-green-600 px-5 py-3.5 rounded-r-xl hover:from-green-600 hover:to-green-700 transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl group-hover:scale-105">
+                <i class="fas fa-search text-white text-sm"></i>
             </button>
         </div>
           <div class="text-xs text-white mt-2 space-x-3 hidden lg:block opacity-90">
@@ -67,15 +67,15 @@
           <!-- Mobile Search Button -->
           <button 
             @click="toggleMobileSearch" 
-            class="md:hidden bg-green-800 p-3 rounded-lg hover:bg-green-900 transition-colors"
-            :class="{ 'bg-green-900': showMobileSearch }"
+            class="md:hidden bg-green-800/80 backdrop-blur-sm p-3 rounded-xl hover:bg-green-900/80 transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105"
+            :class="{ 'bg-green-900/80': showMobileSearch }"
           >
             <i class="fas fa-search"></i>
           </button>
 
           <!-- Cart -->
           <button 
-            class="flex items-center gap-2 bg-orange-500 px-3 py-2 sm:px-4 sm:py-3 rounded-lg hover:bg-orange-600 transition-colors duration-200 shadow-sm"
+            class="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 px-3 py-2 sm:px-4 sm:py-3 rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
             @click="toggleCart"
           >
             <div class="relative">
@@ -101,10 +101,10 @@
               @click="$emit('open-login')" 
               :disabled="props.isLoading"
               :class="[
-                'flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-3 rounded-lg transition-colors shadow-sm font-medium',
+                'flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-300 shadow-lg font-medium hover:scale-105',
                 props.isLoading 
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                  : 'bg-white text-green-800 hover:bg-gray-50'
+                  : 'bg-white text-green-800 hover:bg-gray-50 hover:shadow-xl'
               ]"
             >
               <span v-if="props.isLoading" class="flex items-center gap-2">
@@ -124,7 +124,7 @@
             <button 
               v-else
               @click.stop="toggleUserProfile" 
-              class="flex items-center gap-2 bg-white text-green-800 px-3 py-2 sm:px-4 sm:py-3 rounded-lg hover:bg-gray-50 transition-colors shadow-sm font-medium"
+              class="flex items-center gap-2 bg-white text-green-800 px-3 py-2 sm:px-4 sm:py-3 rounded-xl hover:bg-gray-50 transition-all duration-300 shadow-lg hover:shadow-xl font-medium hover:scale-105"
             >
               <div class="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
                 <span class="text-white text-xs font-semibold">{{ userInitials }}</span>
@@ -154,8 +154,8 @@
           <!-- Mobile Menu Button -->
           <button 
             @click="toggleMobileMenu" 
-            class="md:hidden bg-green-800 p-3 rounded-lg hover:bg-green-900 transition-colors"
-            :class="{ 'bg-green-900': showMobileMenu }"
+            class="md:hidden bg-green-800/80 backdrop-blur-sm p-3 rounded-xl hover:bg-green-900/80 transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105"
+            :class="{ 'bg-green-900/80': showMobileMenu }"
           >
             <i :class="showMobileMenu ? 'fas fa-times' : 'fas fa-bars'"></i>
           </button>
@@ -164,14 +164,14 @@
 
       <!-- Mobile Search Bar - Now stays below logo -->
       <div v-if="showMobileSearch" class="mt-4 md:hidden animate-slideDown">
-          <div class="flex">
+          <div class="flex group">
     <input 
       type="text" 
       placeholder="Tìm thuốc, bệnh lý, thực phẩm chức năng..." 
-      class="flex-grow px-4 py-3 rounded-l-lg text-black text-sm bg-white shadow-sm border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-300"
+      class="flex-grow px-5 py-3.5 rounded-l-xl text-gray-800 text-sm bg-white/95 backdrop-blur-sm shadow-lg border border-white/50 focus:outline-none focus:ring-3 focus:ring-green-300/50 focus:border-green-400 focus:shadow-xl transition-all duration-300 placeholder:text-gray-500"
     />
     <button 
-      class="bg-green-500 px-4 py-3 rounded-r-lg hover:bg-green-600 transition-colors flex items-center justify-center"
+      class="bg-gradient-to-r from-green-500 to-green-600 px-5 py-3.5 rounded-r-xl hover:from-green-600 hover:to-green-700 transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl group-hover:scale-105"
     >
       <i class="fas fa-search text-white text-sm"></i>
     </button>
@@ -201,7 +201,7 @@
 
     <!-- Navigation Menu -->
     <!-- Desktop Navigation with Dropdowns -->
-    <nav class="bg-green-800 text-sm hidden md:block border-t border-green-700">
+    <nav class="bg-green-800/95 backdrop-blur-sm text-sm hidden md:block border-t border-green-700/50 shadow-lg">
       <div class="container mx-auto px-4">
         <div class="flex items-center">
           <!-- Navigation Items with Dropdowns -->
@@ -216,43 +216,7 @@
       </div>
     </nav>
 
-    <!-- Mobile Menu Overlay -->
-    <div 
-      v-if="showMobileMenu" 
-      class="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-      @click="toggleMobileMenu"
-    ></div>
 
-    <!-- Mobile Navigation Menu - Sliding from left -->
-    <nav 
-      class="fixed top-0 left-0 h-full w-80 bg-green-800 text-sm md:hidden border-r border-green-700 z-50 transform transition-transform duration-300 ease-in-out overflow-y-auto"
-      :class="showMobileMenu ? 'translate-x-0' : '-translate-x-full'"
-    >
-      <!-- Mobile Menu Header -->
-      <div class="bg-green-700 p-4 flex items-center justify-between border-b border-green-600">
-        <div class="flex items-center gap-2">
-          <img src="/logo.webp" alt="Long Chau Logo" class="w-32 h-8" />
-        </div>
-        <button 
-          @click="toggleMobileMenu"
-          class="bg-green-600 p-2 rounded-lg hover:bg-green-500 transition-colors"
-        >
-          <i class="fas fa-times text-white"></i>
-        </button>
-      </div>
-
-      <!-- Mobile Menu Content -->
-      <div class="p-4">
-        <NavigationDropdown
-          v-for="item in navigationItems" 
-          :key="item.name"
-          :item="item"
-          :is-mobile="true"
-          @item-selected="handleItemSelected"
-          class="border-b border-green-700 last:border-b-0"
-        />
-      </div>
-    </nav>
 
     <!-- Mobile User Profile Modal -->
     <UserProfileModal
@@ -266,6 +230,44 @@
       @favorites="handleFavorites"
     />
   </header>
+
+  <!-- Mobile Menu Overlay with Gaussian Blur - Outside header for full screen coverage -->
+  <div 
+    v-if="showMobileMenu" 
+    class="mobile-overlay fixed inset-0 bg-white/20 backdrop-blur-md z-[9998] md:hidden"
+    @click="toggleMobileMenu"
+  ></div>
+
+  <!-- Mobile Navigation Menu - Sliding from left - Outside header for full screen coverage -->
+  <nav 
+    class="mobile-sidebar fixed top-0 left-0 h-full w-80 bg-green-800/95 backdrop-blur-md text-sm text-white md:hidden border-r border-green-700/50 z-[9999] transform transition-transform duration-300 ease-in-out overflow-y-auto shadow-2xl"
+    :class="showMobileMenu ? 'translate-x-0' : '-translate-x-full'"
+  >
+    <!-- Mobile Menu Header -->
+    <div class="bg-green-700/90 backdrop-blur-sm p-4 flex items-center justify-between border-b border-green-600/50">
+      <div class="flex items-center gap-2">
+        <img src="/logo.webp" alt="Long Chau Logo" class="w-32 h-8" />
+      </div>
+      <button 
+        @click="toggleMobileMenu"
+        class="bg-green-600/80 backdrop-blur-sm p-2 rounded-xl hover:bg-green-500/80 transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105"
+      >
+        <i class="fas fa-times text-white"></i>
+      </button>
+    </div>
+
+    <!-- Mobile Menu Content -->
+    <div class="p-4">
+      <NavigationDropdown
+        v-for="item in navigationItems" 
+        :key="item.name"
+        :item="item"
+        :is-mobile="true"
+        @item-selected="handleItemSelected"
+        class="border-b border-green-700 last:border-b-0"
+      />
+    </div>
+  </nav>
 </template>
 
 <script setup>
@@ -624,5 +626,29 @@ button:focus {
 
 .-translate-x-full {
   --tw-translate-x: -100%;
+}
+
+/* Ensure mobile sidebar is always on top and visible */
+@media (max-width: 768px) {
+  .mobile-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    height: 100vh !important;
+    height: 100dvh !important; /* Dynamic viewport height for mobile */
+    width: 320px !important;
+    z-index: 9999 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  
+  .mobile-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 9998 !important;
+  }
 }
 </style>

@@ -342,7 +342,10 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useToast } from '../composables/useToast'
 import StaffCard from '../components/StaffManagement/StaffCard.vue'
+
+const { showSuccess, showError } = useToast()
 import CreateEditModal from '../components/StaffManagement/CreateEditModal.vue'
 import SuccessModal from '../components/StaffManagement/SuccessModal.vue'
 import DeleteModal from '../components/StaffManagement/DeleteModal.vue'
@@ -759,7 +762,7 @@ async function saveStaff() {
       
       if (data.success) {
         // Show success message for update
-        showToast('Cập nhật thông tin nhân viên thành công!', 'success')
+        showSuccess('Cập nhật thông tin nhân viên thành công!')
         await fetchUsers()
         closeModal() // Only close on success
       } else {
@@ -841,10 +844,7 @@ async function confirmToggleStatus() {
     
     if (data.success) {
       // Show success message
-      showToast(
-        `Đã ${staffToLock.value.isActive ? 'khóa' : 'mở khóa'} tài khoản của ${staffToLock.value.fullName} thành công!`, 
-        'success'
-      )
+      showSuccess(`Đã ${staffToLock.value.isActive ? 'khóa' : 'mở khóa'} tài khoản của ${staffToLock.value.fullName} thành công!`)
       
       // Refresh the list after status change
       await fetchUsers()
@@ -857,14 +857,14 @@ async function confirmToggleStatus() {
     // Handle specific error cases
     if (error.message) {
       if (error.message.includes('Staff user not found')) {
-        showToast('Không tìm thấy thông tin nhân viên', 'error')
+        showError('Không tìm thấy thông tin nhân viên')
       } else if (error.message.includes('At least one field must be provided')) {
-        showToast('Không có thay đổi nào để cập nhật', 'error')
+        showError('Không có thay đổi nào để cập nhật')
       } else {
-        showToast(error.message, 'error')
+        showError(error.message)
       }
     } else {
-      showToast('Có lỗi xảy ra khi thay đổi trạng thái tài khoản', 'error')
+      showError('Có lỗi xảy ra khi thay đổi trạng thái tài khoản')
     }
   } finally {
     closeLockModal()
@@ -900,10 +900,7 @@ async function performDeleteStaff() {
     
     if (data.success) {
       // Show success message
-      showToast(
-        `Đã xóa nhân viên ${staffToDelete.value.fullName} thành công!`, 
-        'success'
-      )
+      showSuccess(`Đã xóa nhân viên ${staffToDelete.value.fullName} thành công!`)
       
       // Refresh the list after deletion
       await fetchUsers()
@@ -916,16 +913,16 @@ async function performDeleteStaff() {
     // Handle specific error cases
     if (error.message) {
       if (error.message.includes('User not found')) {
-        showToast('Không tìm thấy thông tin nhân viên', 'error')
+        showError('Không tìm thấy thông tin nhân viên')
       } else if (error.message.includes('Missing parameter')) {
-        showToast('Không có thay đổi nào để cập nhật', 'error')
+        showError('Không có thay đổi nào để cập nhật')
       } else if (error.message.includes('Cannot delete')) {
-        showToast('Không thể xóa nhân viên này', 'error')
+        showError('Không thể xóa nhân viên này')
       } else {
-        showToast(error.message, 'error')
+        showError(error.message)
       }
     } else {
-      showToast('Có lỗi xảy ra khi xóa nhân viên', 'error')
+      showError('Có lỗi xảy ra khi xóa nhân viên')
     }
   } finally {
     closeDeleteModal()
@@ -946,43 +943,14 @@ function clearFilters() {
 
 function copyToClipboard(text) {
   navigator.clipboard.writeText(text).then(() => {
-    showToast('Đã sao chép vào bảng nhớ!', 'success')
+    showSuccess('Đã sao chép vào bảng nhớ!')
   }).catch(err => {
     console.error('Không thể sao chép vào bảng nhớ:', err)
-    showToast('Không thể sao chép vào bảng nhớ', 'error')
+    showError('Không thể sao chép vào bảng nhớ')
   })
 }
 
-function showToast(message, type = 'success') {
-  const toast = document.createElement('div')
-  const bgColor = type === 'success' ? 'bg-green-600' : 'bg-red-600'
-  const icon = type === 'success' ? 'fas fa-check' : 'fas fa-exclamation-triangle'
-  
-  toast.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-xl shadow-lg z-50 transform transition-all duration-300 flex items-center space-x-3`
-  toast.innerHTML = `
-    <i class="${icon}"></i>
-    <span>${message}</span>
-  `
-  
-  document.body.appendChild(toast)
-  
-  // Animate in
-  setTimeout(() => {
-    toast.style.transform = 'translateX(0)'
-    toast.style.opacity = '1'
-  }, 100)
-  
-  // Remove toast after 3 seconds
-  setTimeout(() => {
-    toast.style.transform = 'translateX(100%)'
-    toast.style.opacity = '0'
-    setTimeout(() => {
-      if (document.body.contains(toast)) {
-        document.body.removeChild(toast)
-      }
-    }, 300)
-  }, 3000)
-}
+
 
 // ===== LIFECYCLE =====
 onMounted(() => {

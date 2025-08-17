@@ -14,13 +14,29 @@
           
           <button 
             @click="refreshOrders"
-            class="group bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3.5 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center space-x-3"
+            :disabled="loading || refreshing"
+            class="group bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3.5 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
-            <i class="fas fa-sync-alt group-hover:rotate-180 transition-transform duration-300"></i>
-            <span>Làm mới</span>
+            <i :class="[
+              'fas fa-sync-alt transition-transform duration-300',
+              refreshing ? 'animate-spin' : 'group-hover:rotate-180'
+            ]"></i>
+            <span>{{ refreshing ? 'Đang tải...' : 'Làm mới' }}</span>
           </button>
         </div>
       </header>
+
+      <!-- Success Message -->
+      <div v-if="successMessage" class="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <i class="fas fa-check-circle text-green-600"></i>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm font-medium text-green-800">{{ successMessage }}</p>
+          </div>
+        </div>
+      </div>
 
       <!-- Search and Filters -->
       <section class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-8">
@@ -28,14 +44,16 @@
           <!-- Search Bar -->
           <div class="lg:col-span-2 relative">
             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <i class="fas fa-search text-gray-400"></i>
+              <i v-if="!loading" class="fas fa-search text-gray-400"></i>
+              <div v-else class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
             </div>
             <input 
               v-model="filters.search"
               @input="debouncedSearch"
+              :disabled="loading"
               type="text" 
               placeholder="Tìm kiếm theo mã đơn hàng, tên sản phẩm..."
-              class="w-full pl-12 pr-4 py-3.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white placeholder-gray-500"
+              class="w-full pl-12 pr-4 py-3.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white placeholder-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           
@@ -44,13 +62,14 @@
             <select 
               v-model="filters.status"
               @change="fetchOrders"
-              class="w-full px-4 py-3.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none cursor-pointer"
+              :disabled="loading"
+              class="w-full px-4 py-3.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Tất cả trạng thái</option>
               <option value="pending">Chờ xác nhận</option>
               <option value="confirmed">Đã xác nhận</option>
               <option value="processing">Đang chuẩn bị</option>
-              <option value="shipping">Đang giao hàng</option>
+                      <option value="shipped">Đã gửi hàng</option>
               <option value="delivered">Đã giao hàng</option>
               <option value="cancelled">Đã hủy</option>
             </select>
@@ -64,8 +83,9 @@
             <input 
               v-model="filters.date"
               @change="fetchOrders"
+              :disabled="loading"
               type="date"
-              class="w-full px-4 py-3.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white cursor-pointer"
+              class="w-full px-4 py-3.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
         </div>
@@ -74,7 +94,7 @@
         <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mt-6 pt-6 border-t border-gray-100">
           <div class="text-center">
             <div class="text-2xl font-bold text-blue-600">{{ apiData.pagination?.totalRecords || 0 }}</div>
-            <div class="text-sm text-gray-600">Tổng đơn hàng</div>
+            <div class="text-sm text-gray-600">{{ hasActiveFilters ? 'Kết quả tìm kiếm' : 'Tổng đơn hàng' }}</div>
           </div>
           <div class="text-center">
             <div class="text-2xl font-bold text-yellow-600">{{ pendingOrders }}</div>
@@ -104,13 +124,13 @@
       </div>
 
       <!-- Error State -->
-      <div v-else-if="error" class="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
+      <div v-else-if="error || apiError" class="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
         <div class="text-center">
           <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
           </div>
           <h3 class="text-xl font-semibold text-gray-800 mb-2">Lỗi tải dữ liệu</h3>
-          <p class="text-gray-600 mb-4">{{ error }}</p>
+          <p class="text-gray-600 mb-4">{{ error || apiError }}</p>
           <button 
             @click="fetchOrders"
             class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium transition-colors duration-200"
@@ -143,7 +163,7 @@
             </div>
             <h3 class="text-xl font-semibold text-gray-800 mb-3">Chưa có đơn hàng nào</h3>
             <p class="text-gray-600 mb-6 max-w-md mx-auto">
-              {{ hasActiveFilters ? 'Không tìm thấy đơn hàng phù hợp với bộ lọc hiện tại' : 'Bạn chưa có đơn hàng nào. Hãy bắt đầu mua sắm ngay!' }}
+              {{ hasActiveFilters ? 'Không tìm thấy đơn hàng phù hợp với bộ lọc hiện tại. Hãy thử điều chỉnh bộ lọc hoặc xóa bộ lọc để xem tất cả đơn hàng.' : 'Bạn chưa có đơn hàng nào. Hãy bắt đầu mua sắm ngay!' }}
             </p>
             <div class="flex flex-col sm:flex-row gap-3 justify-center">
               <button 
@@ -201,7 +221,7 @@
                 <!-- Previous page -->
                 <button 
                   @click="changePage(pagination.page - 1)"
-                  :disabled="!apiData.pagination.hasPrevPage"
+                  :disabled="!apiData.pagination?.hasPrevPage"
                   class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                   title="Trang trước"
                 >
@@ -228,7 +248,7 @@
                 <!-- Next page -->
                 <button 
                   @click="changePage(pagination.page + 1)"
-                  :disabled="!apiData.pagination.hasNextPage"
+                  :disabled="!apiData.pagination?.hasNextPage"
                   class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                   title="Trang sau"
                 >
@@ -247,12 +267,18 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import CustomerOrderCard from '../components/CustomerOrders/CustomerOrderCard.vue'
+import { useOrderApi } from '../services/orderApi'
+import { useErrorHandler } from '../composables/useErrorHandler'
 
 const router = useRouter()
+const { getOrdersList } = useOrderApi()
+const { apiError, clearAllErrors } = useErrorHandler()
 
 // ===== REACTIVE STATE =====
 const loading = ref(false)
+const refreshing = ref(false)
 const error = ref('')
+const successMessage = ref('')
 
 // API Data
 const ordersList = ref([])
@@ -331,13 +357,14 @@ const visiblePages = computed(() => {
 // Statistics - computed from current orders list
 const pendingOrders = computed(() => ordersList.value.filter(o => o.status === 'pending').length)
 const processingOrders = computed(() => ordersList.value.filter(o => ['confirmed', 'processing'].includes(o.status)).length)
-const shippingOrders = computed(() => ordersList.value.filter(o => o.status === 'shipping').length)
+const shippingOrders = computed(() => ordersList.value.filter(o => o.status === 'shipped').length)
 const deliveredOrders = computed(() => ordersList.value.filter(o => o.status === 'delivered').length)
 
 // ===== API METHODS =====
 async function fetchOrders() {
   loading.value = true
   error.value = ''
+  clearAllErrors()
   
   try {
     const params = {
@@ -358,29 +385,20 @@ async function fetchOrders() {
       params.dateTo = filters.value.date
     }
 
-    // For demo purposes, use mock data
-    const mockData = generateMockCustomerOrders(params)
+    const response = await getOrdersList(params)
     
-    ordersList.value = mockData.data.orders
-    apiData.value = {
-      pagination: mockData.data.pagination,
-      filters: mockData.data.filters
+    if (response.success) {
+      ordersList.value = response.data.orders || []
+      apiData.value = {
+        pagination: response.data.pagination || null,
+        filters: response.data.filters || {}
+      }
+    } else {
+      throw new Error(response.error || 'Failed to fetch orders')
     }
-    
-    // Uncomment when API is ready
-    // const data = await getCustomerOrders(params)
-    // if (data.success) {
-    //   ordersList.value = data.data.orders
-    //   apiData.value = {
-    //     pagination: data.data.pagination,
-    //     filters: data.data.filters
-    //   }
-    // } else {
-    //   throw new Error(data.error || 'Failed to fetch orders')
-    // }
   } catch (err) {
     console.error('Fetch orders error:', err)
-    error.value = err.message || 'Có lỗi xảy ra khi tải danh sách đơn hàng'
+    error.value = err.errorInfo?.message || err.message || 'Có lỗi xảy ra khi tải danh sách đơn hàng'
     ordersList.value = []
     apiData.value = { pagination: null, filters: {} }
   } finally {
@@ -388,225 +406,7 @@ async function fetchOrders() {
   }
 }
 
-// Mock data generator for demo
-function generateMockCustomerOrders(params) {
-  const mockOrders = [
-    {
-      id: 1,
-      orderNumber: '5276043',
-      date: '2025-08-04',
-      status: 'processing',
-      deliveryType: 'grab',
-      estimatedDelivery: {
-        timeRange: 'Từ 18:00 - 19:00 ngày',
-        date: '04/08/2025'
-      },
-      items: [
-        { 
-          id: 1, 
-          name: 'Listerine Tartar Control', 
-          quantity: 2, 
-          price: 187000,
-          image: '/img/product.avif'
-        },
-        { 
-          id: 2, 
-          name: 'Probiotics bổ sung men tiêu hóa', 
-          quantity: 1, 
-          price: 163850,
-          image: '/img/product.avif'
-        }
-      ],
-      pricing: {
-        subtotal: 537850,
-        shippingFee: 0,
-        total: 537850
-      }
-    },
-    {
-      id: 2,
-      orderNumber: '5276044',
-      date: '2025-08-04',
-      status: 'pending',
-      deliveryType: 'standard',
-      estimatedDelivery: {
-        timeRange: 'Từ 14:00 - 16:00 ngày',
-        date: '05/08/2025'
-      },
-      items: [
-        { 
-          id: 3, 
-          name: 'Paracetamol 500mg', 
-          quantity: 1, 
-          price: 25000,
-          image: '/img/product.avif'
-        }
-      ],
-      pricing: {
-        subtotal: 25000,
-        shippingFee: 15000,
-        total: 40000
-      }
-    },
-    {
-      id: 3,
-      orderNumber: '5276045',
-      date: '2025-08-03',
-      status: 'delivered',
-      deliveryType: 'express',
-      estimatedDelivery: {
-        timeRange: 'Đã giao lúc 15:30 ngày',
-        date: '03/08/2025'
-      },
-      items: [
-        { 
-          id: 4, 
-          name: 'Vitamin C 1000mg', 
-          quantity: 2, 
-          price: 150000,
-          image: '/img/product.avif'
-        },
-        { 
-          id: 5, 
-          name: 'Omega-3 Fish Oil', 
-          quantity: 1, 
-          price: 280000,
-          image: '/img/product.avif'
-        }
-      ],
-      pricing: {
-        subtotal: 580000,
-        shippingFee: 0,
-        total: 580000
-      }
-    },
-    {
-      id: 4,
-      orderNumber: '5276046',
-      date: '2025-08-02',
-      status: 'shipping',
-      deliveryType: 'grab',
-      estimatedDelivery: {
-        timeRange: 'Dự kiến giao từ 10:00 - 12:00 ngày',
-        date: '05/08/2025'
-      },
-      items: [
-        { 
-          id: 6, 
-          name: 'Thuốc ho Prospan', 
-          quantity: 1, 
-          price: 95000,
-          image: '/img/product.avif'
-        }
-      ],
-      pricing: {
-        subtotal: 95000,
-        shippingFee: 0,
-        total: 95000
-      }
-    },
-    {
-      id: 5,
-      orderNumber: '5276047',
-      date: '2025-08-01',
-      status: 'cancelled',
-      deliveryType: 'standard',
-      estimatedDelivery: {
-        timeRange: 'Đã hủy',
-        date: '01/08/2025'
-      },
-      items: [
-        { 
-          id: 7, 
-          name: 'Kem chống nắng SPF 50', 
-          quantity: 1, 
-          price: 320000,
-          image: '/img/product.avif'
-        }
-      ],
-      pricing: {
-        subtotal: 320000,
-        shippingFee: 25000,
-        total: 345000
-      }
-    },
-    {
-      id: 6,
-      orderNumber: '5276048',
-      date: '2025-07-30',
-      status: 'delivered',
-      deliveryType: 'express',
-      estimatedDelivery: {
-        timeRange: 'Đã giao lúc 09:15 ngày',
-        date: '30/07/2025'
-      },
-      items: [
-        { 
-          id: 8, 
-          name: 'Thuốc đau đầu Aspirin', 
-          quantity: 2, 
-          price: 45000,
-          image: '/img/product.avif'
-        },
-        { 
-          id: 9, 
-          name: 'Gel bôi trơn Y-Lube', 
-          quantity: 1, 
-          price: 125000,
-          image: '/img/product.avif'
-        }
-      ],
-      pricing: {
-        subtotal: 215000,
-        shippingFee: 0,
-        total: 215000
-      }
-    }
-  ]
 
-  // Apply filters
-  let filteredOrders = mockOrders
-  
-  if (params.search) {
-    filteredOrders = filteredOrders.filter(order => 
-      order.orderNumber.includes(params.search) ||
-      order.items.some(item => item.name.toLowerCase().includes(params.search.toLowerCase()))
-    )
-  }
-  
-  if (params.status) {
-    filteredOrders = filteredOrders.filter(order => order.status === params.status)
-  }
-  
-  if (params.dateFrom) {
-    filteredOrders = filteredOrders.filter(order => order.date === params.dateFrom)
-  }
-
-  // Pagination
-  const page = params.page || 1
-  const limit = params.limit || 12
-  const totalRecords = filteredOrders.length
-  const totalPages = Math.ceil(totalRecords / limit)
-  const startIndex = (page - 1) * limit
-  const endIndex = startIndex + limit
-  const paginatedOrders = filteredOrders.slice(startIndex, endIndex)
-
-  return {
-    success: true,
-    data: {
-      orders: paginatedOrders,
-      pagination: {
-        currentPage: page,
-        totalPages,
-        totalRecords,
-        limit,
-        hasPrevPage: page > 1,
-        hasNextPage: page < totalPages
-      },
-      filters: params
-    }
-  }
-}
 
 // Debounced search function
 function debouncedSearch() {
@@ -634,8 +434,18 @@ function changePage(page) {
   }
 }
 
-function refreshOrders() {
-  fetchOrders()
+async function refreshOrders() {
+  refreshing.value = true
+  successMessage.value = ''
+  try {
+    await fetchOrders()
+    successMessage.value = 'Danh sách đơn hàng đã được cập nhật'
+    setTimeout(() => {
+      successMessage.value = ''
+    }, 3000)
+  } finally {
+    refreshing.value = false
+  }
 }
 
 function clearFilters() {
@@ -649,7 +459,8 @@ function clearFilters() {
 }
 
 function viewOrderDetails(order) {
-  router.push(`/orders/${order.orderNumber}`)
+  // Use order ID for the route, as that's what the backend expects
+  router.push(`/orders/${order.id}`)
 }
 
 
@@ -658,36 +469,7 @@ function goToProducts() {
   router.push('/products')
 }
 
-function showToast(message, type = 'success') {
-  const toast = document.createElement('div')
-  const bgColor = type === 'success' ? 'bg-green-600' : 'bg-red-600'
-  const icon = type === 'success' ? 'fas fa-check' : 'fas fa-exclamation-triangle'
-  
-  toast.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-xl shadow-lg z-50 transform transition-all duration-300 flex items-center space-x-3`
-  toast.innerHTML = `
-    <i class="${icon}"></i>
-    <span>${message}</span>
-  `
-  
-  document.body.appendChild(toast)
-  
-  // Animate in
-  setTimeout(() => {
-    toast.style.transform = 'translateX(0)'
-    toast.style.opacity = '1'
-  }, 100)
-  
-  // Remove toast after 3 seconds
-  setTimeout(() => {
-    toast.style.transform = 'translateX(100%)'
-    toast.style.opacity = '0'
-    setTimeout(() => {
-      if (document.body.contains(toast)) {
-        document.body.removeChild(toast)
-      }
-    }, 300)
-  }, 3000)
-}
+
 
 // ===== LIFECYCLE =====
 onMounted(() => {

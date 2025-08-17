@@ -680,6 +680,7 @@ import DeleteModal from '../components/ProductManagement/DeleteModal.vue'
 import { useCategories, useLegacyCategories } from '../composables/useCategories.js'
 import { useProductApi } from '../services/productApi.js'
 import { useErrorHandler } from '../composables/useErrorHandler.js'
+import { useErrorDisplay } from '../composables/useErrorDisplay.js'
 import { ERROR_CODES } from '../constants/errCodes.js'
 
 // Reactive state
@@ -709,6 +710,7 @@ const showSuccessModal = ref(false)
 // API service and error handling
 const { getProducts, createProduct, updateProduct, deleteProduct: deleteProductApi } = useProductApi()
 const { errors, apiError, clearAllErrors, clearFieldError, setFieldError, setApiError, handleApiError, handleApiResponseError } = useErrorHandler()
+const { showErrorToast, handleApiErrorWithToast } = useErrorDisplay()
 
 // Categories composable - use new system
 const { 
@@ -1076,9 +1078,9 @@ const saveProduct = async (productData) => {
       await fetchProducts() // Refresh the list
       closeModal() // Only close on success
     } else {
-      // Handle backend error response
-      const errorMessage = response?.error?.message || response?.message || response?.error || 'Có lỗi xảy ra'
-      throw new Error(errorMessage)
+      // This should not happen with standardized API responses
+      // The makeStandardizedApiRequest will handle error responses automatically
+      throw new Error('Unexpected response format')
     }
   } catch (err) {
     console.error('Save product error:', err)
@@ -1097,8 +1099,8 @@ const confirmDelete = async () => {
       displaySuccessMessage('Đã xóa sản phẩm thành công')
       await fetchProducts() // Refresh the list
     } else {
-      const errorMessage = response?.error?.message || response?.message || response?.error || 'Không thể xóa sản phẩm'
-      throw new Error(errorMessage)
+      // This should not happen with standardized API responses
+      throw new Error('Unexpected response format')
     }
   } catch (err) {
     console.error('Delete product error:', err)
@@ -1182,13 +1184,8 @@ const displaySuccessMessage = (message) => {
 const handleProductApiError = (error) => {
   console.error('Product API Error:', error)
   
-  // Use the centralized error handler
-  if (error.response) {
-    console.log('Error response data:', error.response)
-    return handleApiResponseError(error.response)
-  } else {
-    return handleApiError(error)
-  }
+  // Use the new standardized error display
+  return handleApiErrorWithToast(error, 'Product API call', 'Có lỗi xảy ra khi xử lý sản phẩm')
 }
 
 const toggleSelectAll = () => {

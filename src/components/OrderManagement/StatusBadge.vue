@@ -31,8 +31,8 @@ const statusConfig = {
     classes: 'bg-purple-100 text-purple-800',
     icon: 'fas fa-cog'
   },
-  shipping: {
-    text: 'Đang giao hàng',
+  shipped: {
+    text: 'Đã gửi hàng',
     classes: 'bg-indigo-100 text-indigo-800',
     icon: 'fas fa-truck'
   },

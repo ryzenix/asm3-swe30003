@@ -64,33 +64,19 @@ export function useStaffApi() {
 
   // Delete staff user
   const deleteStaff = async (id) => {
-    try {
-      const url = `${API_BASE_URL}/delete/${id}`
-      const response = await makeApiRequest(url, {
-        method: 'DELETE'
-      })
-      
-      return response
-    } catch (error) {
-      console.error('Delete staff error:', error)
-      throw error
-    }
+    const url = `${API_BASE_URL}/delete/${id}`
+    return await makeStandardizedApiRequest(url, {
+      method: 'DELETE'
+    })
   }
 
   // Toggle staff status (active/inactive)
   const toggleStaffStatus = async (id, isActive) => {
-    try {
-      const url = `${API_BASE_URL}/modify/${id}`
-      const response = await makeApiRequest(url, {
-        method: 'PUT',
-        body: JSON.stringify({ isActive })
-      })
-      
-      return response
-    } catch (error) {
-      console.error('Toggle staff status error:', error)
-      throw error
-    }
+    const url = `${API_BASE_URL}/modify/${id}`
+    return await makeStandardizedApiRequest(url, {
+      method: 'PUT',
+      body: JSON.stringify({ isActive })
+    })
   }
 
   return {

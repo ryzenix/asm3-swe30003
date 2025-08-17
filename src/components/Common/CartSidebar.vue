@@ -127,17 +127,7 @@
     </div>
   </transition>
 
-  <!-- Success Messages -->
-  <div 
-    v-for="message in feedbackMessages" 
-    :key="message.id"
-    class="fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-60 animate-slide-in"
-  >
-    <div class="flex items-center space-x-2">
-      <i class="fas fa-check-circle"></i>
-      <span class="text-sm">{{ message.text }}</span>
-    </div>
-  </div>
+
 
 
 </template>
@@ -156,7 +146,6 @@ const {
   totalItems,
   totalPrice,
   formattedTotalPrice,
-  feedbackMessages,
   closeCart,
   clearCart: clearCartAction
 } = useCart()

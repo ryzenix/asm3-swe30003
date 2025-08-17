@@ -101,11 +101,88 @@
               </div>
             </div>
 
-            <!-- Prescription Products -->
-            <div class="space-y-4">
+            <!-- Prescription Details -->
+            <div v-if="order?.prescriptionData" class="space-y-4">
               <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <i class="fas fa-pills text-red-500"></i>
-                Sản phẩm yêu cầu đơn thuốc
+                <i class="fas fa-user-md text-green-500"></i>
+                Thông tin đơn thuốc
+              </h3>
+              <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div v-if="order.prescriptionData.patientName">
+                    <span class="text-gray-600">Tên bệnh nhân:</span>
+                    <div class="font-medium">{{ order.prescriptionData.patientName }}</div>
+                  </div>
+                  <div v-if="order.prescriptionData.doctorName">
+                    <span class="text-gray-600">Bác sĩ kê đơn:</span>
+                    <div class="font-medium">{{ order.prescriptionData.doctorName }}</div>
+                  </div>
+                  <div v-if="order.prescriptionData.doctorLicense">
+                    <span class="text-gray-600">Số chứng chỉ hành nghề:</span>
+                    <div class="font-medium">{{ order.prescriptionData.doctorLicense }}</div>
+                  </div>
+                  <div v-if="order.prescriptionData.clinicName">
+                    <span class="text-gray-600">Phòng khám:</span>
+                    <div class="font-medium">{{ order.prescriptionData.clinicName }}</div>
+                  </div>
+                  <div v-if="order.prescriptionData.issueDate">
+                    <span class="text-gray-600">Ngày kê đơn:</span>
+                    <div class="font-medium">{{ formatDate(order.prescriptionData.issueDate) }}</div>
+                  </div>
+                  <div v-if="order.prescriptionData.expiryDate">
+                    <span class="text-gray-600">Ngày hết hạn:</span>
+                    <div class="font-medium">{{ formatDate(order.prescriptionData.expiryDate) }}</div>
+                  </div>
+                </div>
+                <div v-if="order.prescriptionData.diagnosis" class="mt-4 pt-4 border-t border-green-200">
+                  <span class="text-gray-600 text-sm">Chẩn đoán:</span>
+                  <p class="text-gray-900 mt-1">{{ order.prescriptionData.diagnosis }}</p>
+                </div>
+                <div v-if="order.prescriptionData.notes" class="mt-4 pt-4 border-t border-green-200">
+                  <span class="text-gray-600 text-sm">Ghi chú:</span>
+                  <p class="text-gray-900 mt-1">{{ order.prescriptionData.notes }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Prescription Items from Backend -->
+            <div v-if="order?.prescriptionData?.items && order.prescriptionData.items.length > 0" class="space-y-4">
+              <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <i class="fas fa-pills text-blue-500"></i>
+                Thuốc trong đơn thuốc
+              </h3>
+              <div class="space-y-3">
+                <div 
+                  v-for="item in order.prescriptionData.items" 
+                  :key="item.id"
+                  class="flex items-center space-x-3 bg-blue-50 rounded-lg p-3 border border-blue-200"
+                >
+                  <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-pills text-blue-500"></i>
+                  </div>
+                  <div class="flex-1">
+                    <h5 class="font-medium text-gray-900">{{ item.medicationName }}</h5>
+                    <div class="text-sm text-gray-600 space-y-1">
+                      <p><span class="font-medium">Liều dùng:</span> {{ item.dosage }}</p>
+                      <p><span class="font-medium">Tần suất:</span> {{ item.frequency }}</p>
+                      <p v-if="item.duration"><span class="font-medium">Thời gian:</span> {{ item.duration }}</p>
+                      <p v-if="item.quantity"><span class="font-medium">Số lượng:</span> {{ item.quantity }}</p>
+                      <p v-if="item.instructions"><span class="font-medium">Hướng dẫn:</span> {{ item.instructions }}</p>
+                    </div>
+                  </div>
+                  <div v-if="item.productTitle" class="text-right">
+                    <div class="text-sm font-medium text-gray-900">{{ item.productTitle }}</div>
+                    <div v-if="item.productPrice" class="text-xs text-gray-500">{{ formatPrice(item.productPrice) }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Prescription Products from Order -->
+            <div v-if="prescriptionProducts.length > 0" class="space-y-4">
+              <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <i class="fas fa-prescription-bottle-alt text-red-500"></i>
+                Sản phẩm yêu cầu đơn thuốc trong đơn hàng
               </h3>
               <div class="space-y-3">
                 <div 
@@ -117,18 +194,18 @@
                     <i class="fas fa-prescription-bottle-alt text-red-500"></i>
                   </div>
                   <div class="flex-1">
-                    <h5 class="font-medium text-gray-900">{{ product.name }}</h5>
+                    <h5 class="font-medium text-gray-900">{{ product.productTitle || product.name }}</h5>
                     <p class="text-sm text-gray-600">Số lượng: {{ product.quantity }}</p>
                   </div>
                   <div class="text-right">
-                    <div class="text-sm font-medium text-gray-900">{{ formatPrice(product.price) }}</div>
+                    <div class="text-sm font-medium text-gray-900">{{ formatPrice(product.unitPrice || product.price) }}</div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Prescription Files -->
-            <div v-if="order?.prescriptionData?.files" class="space-y-4">
+            <!-- Prescription Images -->
+            <div v-if="order?.prescriptionData?.images && order.prescriptionData.images.length > 0" class="space-y-4">
               <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <i class="fas fa-file-medical text-blue-500"></i>
                 Đơn thuốc đã tải lên
@@ -136,34 +213,31 @@
 
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div 
-                  v-for="(file, index) in order.prescriptionData.files" 
+                  v-for="(imageUrl, index) in order.prescriptionData.images" 
                   :key="index"
                   class="relative group border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 transition-colors cursor-pointer"
-                  @click="previewFile(file)"
+                  @click="previewImage(imageUrl, index)"
                 >
-                  <!-- File Preview -->
+                  <!-- Image Preview -->
                   <div class="aspect-square">
                     <img 
-                      v-if="file.type.startsWith('image/')"
-                      :src="file.url" 
-                      :alt="file.name"
+                      :src="imageUrl" 
+                      :alt="`Đơn thuốc ${index + 1}`"
                       class="w-full h-full object-cover"
+                      @error="handleImageError"
                     />
-                    <div v-else class="w-full h-full bg-red-100 flex items-center justify-center">
-                      <i class="fas fa-file-pdf text-red-500 text-3xl"></i>
-                    </div>
                   </div>
 
-                  <!-- File Info Overlay -->
+                  <!-- Image Info Overlay -->
                   <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3">
-                    <h5 class="text-white text-sm font-medium truncate">{{ file.name }}</h5>
-                    <p class="text-white/80 text-xs">{{ formatFileSize(file.size) }}</p>
+                    <h5 class="text-white text-sm font-medium">Đơn thuốc {{ index + 1 }}</h5>
+                    <p class="text-white/80 text-xs">Hình ảnh</p>
                   </div>
 
                   <!-- Actions Overlay -->
                   <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
                     <button 
-                      @click.stop="previewFile(file)"
+                      @click.stop="previewImage(imageUrl, index)"
                       class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors"
                       title="Xem trước"
                     >
@@ -178,11 +252,11 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div>
                     <span class="text-gray-600">Thời gian tải lên:</span>
-                    <div class="font-medium">{{ formatDate(order.prescriptionData.uploadedAt) }}</div>
+                    <div class="font-medium">{{ formatDate(order.prescriptionData.createdAt) }}</div>
                   </div>
                   <div>
-                    <span class="text-gray-600">Số lượng file:</span>
-                    <div class="font-medium">{{ order.prescriptionData.files.length }} file</div>
+                    <span class="text-gray-600">Số lượng hình ảnh:</span>
+                    <div class="font-medium">{{ order.prescriptionData.images.length }} hình ảnh</div>
                   </div>
                   <div v-if="order.prescriptionData.expiryDate">
                     <span class="text-gray-600">Hạn sử dụng:</span>
@@ -309,21 +383,22 @@
       <div v-if="previewFileData" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] p-4" @click="closePreview">
         <div class="bg-white rounded-2xl shadow-2xl max-w-4xl max-h-[90vh] overflow-hidden" @click.stop>
           <div class="bg-gray-100 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-            <h3 class="font-medium text-gray-900">{{ previewFileData?.name }}</h3>
+            <h3 class="font-medium text-gray-900">{{ previewImageData?.name || 'Xem trước đơn thuốc' }}</h3>
             <button @click="closePreview" class="text-gray-400 hover:text-gray-600">
               <i class="fas fa-times"></i>
             </button>
           </div>
           <div class="p-4">
             <img 
-              v-if="previewFileData?.type.startsWith('image/')"
-              :src="previewFileData.url" 
-              :alt="previewFileData.name"
+              v-if="previewImageData"
+              :src="previewImageData.url" 
+              :alt="previewImageData.name"
               class="max-w-full max-h-[70vh] object-contain mx-auto"
+              @error="handlePreviewError"
             />
             <div v-else class="text-center py-8">
-              <i class="fas fa-file-pdf text-red-500 text-4xl mb-4"></i>
-              <p class="text-gray-600">Không thể xem trước file PDF</p>
+              <i class="fas fa-image text-gray-400 text-4xl mb-4"></i>
+              <p class="text-gray-600">Không thể xem trước hình ảnh này</p>
             </div>
           </div>
         </div>
@@ -358,8 +433,9 @@ const emit = defineEmits(['close', 'validate'])
 
 // Reactive state
 const previewFileData = ref(null)
+const previewImageData = ref(null)
 const validationForm = ref({
-  pharmacistName: 'Dược sĩ Nguyễn Văn A', // Default pharmacist name
+  pharmacistName: '', // Pharmacist should enter their own name
   status: '',
   notes: ''
 })
@@ -381,7 +457,7 @@ const canSubmit = computed(() => {
 watch(() => props.order, (newOrder) => {
   if (newOrder) {
     validationForm.value = {
-      pharmacistName: 'Dược sĩ Nguyễn Văn A',
+      pharmacistName: '',
       status: '',
       notes: ''
     }
@@ -389,12 +465,27 @@ watch(() => props.order, (newOrder) => {
 })
 
 // Methods
-const previewFile = (file) => {
-  previewFileData.value = file
+const previewImage = (imageUrl, index) => {
+  previewImageData.value = {
+    url: imageUrl,
+    name: `Đơn thuốc ${index + 1}`,
+    index: index
+  }
+  previewFileData.value = previewImageData.value // For modal visibility
 }
 
 const closePreview = () => {
   previewFileData.value = null
+  previewImageData.value = null
+}
+
+const handleImageError = (event) => {
+  console.warn('Failed to load prescription image:', event.target.src)
+  event.target.style.display = 'none'
+}
+
+const handlePreviewError = (event) => {
+  console.warn('Failed to load preview image:', event.target.src)
 }
 
 const clearError = () => {
@@ -404,55 +495,16 @@ const clearError = () => {
 const handleSubmit = async () => {
   if (!canSubmit.value) return
   
-  try {
-    // Import prescription API
-    const { usePrescriptionApi } = await import('../../services/prescriptionApi.js')
-    const { updatePrescriptionStatus } = usePrescriptionApi()
-    
-    const validationData = {
-      status: validationForm.value.status,
-      reviewNotes: validationForm.value.notes.trim()
-    }
-    
-    // Get prescription ID from order data
-    const prescriptionId = props.order?.prescriptionData?.id
-    
-    if (!prescriptionId) {
-      throw new Error('Không tìm thấy ID đơn thuốc')
-    }
-    
-    const response = await updatePrescriptionStatus(prescriptionId, validationData)
-    
-    if (response.success) {
-      emit('validate', {
-        prescriptionId,
-        pharmacistName: validationForm.value.pharmacistName.trim(),
-        status: validationForm.value.status,
-        notes: validationForm.value.notes.trim(),
-        validatedAt: new Date().toISOString(),
-        response: response.data
-      })
-    } else {
-      throw new Error(response.error || 'Cập nhật trạng thái đơn thuốc thất bại')
-    }
-  } catch (error) {
-    console.error('Prescription validation error:', error)
-    emit('validate', {
-      error: error.message || 'Có lỗi xảy ra khi xác thực đơn thuốc'
-    })
-  }
+  // Emit validation data to parent component for processing
+  emit('validate', {
+    pharmacistName: validationForm.value.pharmacistName.trim(),
+    status: validationForm.value.status,
+    notes: validationForm.value.notes.trim()
+  })
 }
 
 const formatPrice = (price) => {
   return price.toLocaleString('vi-VN') + 'đ'
-}
-
-const formatFileSize = (bytes) => {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
 const formatDate = (date) => {
